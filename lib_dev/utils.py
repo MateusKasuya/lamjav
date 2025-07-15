@@ -35,6 +35,7 @@ class Catalog(Enum):
     """
 
     NBA = "nba"
+    ODDS = "odds"
 
     def __str__(self) -> str:
         """
@@ -79,6 +80,11 @@ class Table(Enum):
     ACTIVE_PLAYERS = "active_players"
     PLAYER_INJURIES = "player_injuries"
     SEASON_AVERAGES = "season_averages"
+    SPORTS = "sports"
+    ODDS = "odds"
+    PARTICIPANTS = "participants"
+    HISTORICAL_ODDS = "historical_odds"
+    HISTORICAL_EVENTS = "historical_events"
 
     def __str__(self) -> str:
         """
