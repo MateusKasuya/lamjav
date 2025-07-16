@@ -456,3 +456,63 @@ class TheOddsAPILib:
         except Exception as e:
             self._handle_api_exceptions(e, "get_historical_events")
             return None
+
+    def get_historical_event_odds(
+        self,
+        sport: str,
+        event_id: str,
+        date: str,
+        regions: str = "us",
+        markets: Optional[str] = None,
+        date_format: str = "iso",
+        odds_format: str = "decimal",
+        bookmakers: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get historical odds for a specific event at a given timestamp.
+
+        Args:
+            sport: The sport key (e.g., 'basketball_nba', 'americanfootball_nfl')
+            event_id: The specific event ID to get odds for
+            date: The timestamp in ISO8601 format (e.g., '2021-10-18T12:00:00Z')
+            regions: Comma-separated regions (us, uk, au, eu). Defaults to 'us'
+            markets: Comma-separated markets. Defaults to None
+            date_format: Format for timestamps ('unix' or 'iso'). Defaults to 'iso'
+            odds_format: Format for odds ('decimal' or 'american'). Defaults to 'decimal'
+            bookmakers: Comma-separated bookmaker keys. Defaults to None
+
+        Returns:
+            Historical odds data for the specific event if successful, None if failed
+
+        Note:
+            This endpoint costs 10 credits per market per region and is only available on paid plans.
+        """
+        try:
+            print(f"Getting historical odds for event {event_id} at {date}")
+
+            params = {
+                "regions": regions,
+                "date": date,
+                "dateFormat": date_format,
+                "oddsFormat": odds_format,
+            }
+
+            if markets:
+                params["markets"] = markets
+            if bookmakers:
+                params["bookmakers"] = bookmakers
+
+            historical_odds = self._make_request(
+                f"/historical/sports/{sport}/events/{event_id}/odds",
+                params,
+                "get_historical_event_odds",
+            )
+
+            print(f"Successfully fetched historical odds for event {event_id}")
+            print(f"Snapshot timestamp: {historical_odds.get('timestamp')}")
+
+            return historical_odds
+
+        except Exception as e:
+            self._handle_api_exceptions(e, "get_historical_event_odds")
+            return None

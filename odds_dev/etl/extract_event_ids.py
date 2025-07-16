@@ -1,9 +1,10 @@
 """
-Extract Event IDs from Historical Events Data.
+Extract Event IDs and Commence Times from Historical Events Data.
 
 This script reads historical events data from Google Cloud Storage
-in the odds/landing/historical_events folder and extracts all event IDs,
-then saves them to storage in the odds/transformation/historical_event_id folder.
+in the odds/landing/historical_events folder and extracts all event IDs
+and their commence times, then saves them to storage in the
+odds/transformation/historical_event_id folder.
 """
 
 import sys
@@ -19,9 +20,9 @@ from lib_dev.smartbetting import SmartbettingLib
 from lib_dev.utils import Bucket, Catalog, Schema, Table
 
 
-class EventIDExtractor:
+class EventDataExtractor:
     """
-    Class to extract event IDs from historical events data stored in GCS.
+    Class to extract event IDs and commence times from historical events data stored in GCS.
     """
 
     def __init__(self):
@@ -31,7 +32,7 @@ class EventIDExtractor:
         self.catalog = Catalog.ODDS
         self.schema = Schema.LANDING
         self.table = Table.HISTORICAL_EVENTS
-        # Output path for saving event IDs
+        # Output path for saving event data
         self.output_catalog = Catalog.ODDS
         self.output_schema = "etl"
         self.output_table = "historical_event_id"
@@ -58,7 +59,7 @@ class EventIDExtractor:
                 if blob.name.endswith(".json"):
                     file_names.append(blob.name)
 
-            print(f"Found {len(file_names)} historical events files")
+            print(f"Found {len(file_names)} files")
             return file_names
 
         except Exception as e:
@@ -86,33 +87,32 @@ class EventIDExtractor:
             content = blob.download_as_text()
             events_data = json.loads(content)
 
-            print(f"Read {len(events_data)} events from {file_name}")
             return events_data
 
         except Exception as e:
             print(f"Error reading file {file_name}: {e}")
             return []
 
-    def extract_event_ids(
+    def extract_event_data(
         self, start_date: date = None, end_date: date = None
-    ) -> Set[str]:
+    ) -> Dict[str, str]:
         """
-        Extract all event IDs from historical events files.
+        Extract all event IDs and commence times from historical events files.
 
         Args:
             start_date: Optional start date filter (inclusive)
             end_date: Optional end date filter (inclusive)
 
         Returns:
-            Set of unique event IDs
+            Dictionary mapping event ID to commence time
         """
-        print("Extracting event IDs from historical events data...")
+        print("Extracting event data...")
 
         # List all files
         file_names = self.list_historical_events_files()
         if not file_names:
             print("No historical events files found")
-            return set()
+            return {}
 
         # Filter files by date if specified
         if start_date or end_date:
@@ -130,14 +130,12 @@ class EventIDExtractor:
 
                     filtered_files.append(file_name)
                 except ValueError:
-                    print(f"Could not parse date from filename: {file_name}")
                     continue
 
             file_names = filtered_files
-            print(f"Filtered to {len(file_names)} files based on date range")
 
-        # Extract event IDs from all files
-        event_ids = set()
+        # Extract event data from all files
+        event_data = {}
         total_events = 0
 
         for file_name in file_names:
@@ -145,14 +143,13 @@ class EventIDExtractor:
 
             for event in events_data:
                 event_id = event.get("id")
-                if event_id:
-                    event_ids.add(event_id)
+                commence_time = event.get("commence_time")
+                if event_id and commence_time:
+                    event_data[event_id] = commence_time
                     total_events += 1
 
-        print(
-            f"Extracted {len(event_ids)} unique event IDs from {total_events} total events"
-        )
-        return event_ids
+        print(f"Found {len(event_data)} unique events")
+        return event_data
 
     def get_event_details(self, event_ids: Set[str]) -> Dict[str, Dict[str, Any]]:
         """
@@ -180,14 +177,14 @@ class EventIDExtractor:
         print(f"Found details for {len(event_details)} events")
         return event_details
 
-    def save_event_ids_to_storage(
-        self, event_ids: Set[str], target_date: date = None
+    def save_event_data_to_storage(
+        self, event_data: Dict[str, str], target_date: date = None
     ) -> str:
         """
-        Save extracted event IDs to Google Cloud Storage.
+        Save extracted event data to Google Cloud Storage.
 
         Args:
-            event_ids: Set of event IDs to save
+            event_data: Dictionary mapping event ID to commence time
             target_date: Date for the filename (defaults to today)
 
         Returns:
@@ -207,8 +204,11 @@ class EventIDExtractor:
         # Prepare data structure
         data = {
             "extraction_date": target_date.isoformat(),
-            "total_event_ids": len(event_ids),
-            "event_ids": sorted(list(event_ids)),
+            "total_events": len(event_data),
+            "events": [
+                {"id": event_id, "commence_time": commence_time}
+                for event_id, commence_time in sorted(event_data.items())
+            ],
             "metadata": {
                 "source": "historical_events",
                 "extraction_timestamp": datetime.now().isoformat(),
@@ -229,18 +229,18 @@ class EventIDExtractor:
                 content_type="application/json",
             )
 
-            print(f"✅ Successfully saved {len(event_ids)} event IDs to: {gcs_path}")
+            print(f"✅ Saved {len(event_data)} events to GCS")
             return gcs_path
 
         except Exception as e:
-            print(f"❌ Error saving event IDs to storage: {e}")
+            print(f"❌ Error saving event data to storage: {e}")
             return None
 
-    def extract_and_save_event_ids(
+    def extract_and_save_event_data(
         self, start_date: date = None, end_date: date = None, target_date: date = None
-    ) -> Set[str]:
+    ) -> Dict[str, str]:
         """
-        Extract event IDs and save them to storage in one operation.
+        Extract event data and save them to storage in one operation.
 
         Args:
             start_date: Optional start date filter for extraction (inclusive)
@@ -248,91 +248,41 @@ class EventIDExtractor:
             target_date: Date for the output filename (defaults to today)
 
         Returns:
-            Set of extracted event IDs
+            Dictionary of extracted event data (ID -> commence_time)
         """
-        # Extract event IDs
-        event_ids = self.extract_event_ids(start_date, end_date)
+        # Extract event data
+        event_data = self.extract_event_data(start_date, end_date)
 
-        if event_ids:
+        if event_data:
             # Save to storage
-            saved_path = self.save_event_ids_to_storage(event_ids, target_date)
-            if saved_path:
-                print(f"📁 Event IDs saved to: {saved_path}")
-            else:
-                print("⚠️  Failed to save event IDs to storage")
+            saved_path = self.save_event_data_to_storage(event_data, target_date)
+            if not saved_path:
+                print("⚠️  Failed to save event data to storage")
         else:
-            print("⚠️  No event IDs to save")
+            print("⚠️  No event data to save")
 
-        return event_ids
+        return event_data
 
 
 def main():
     """
-    Main function to demonstrate event ID extraction and storage.
+    Main function to extract and save event data.
     """
-    extractor = EventIDExtractor()
+    extractor = EventDataExtractor()
 
-    # Extract all event IDs and save to storage
-    print("=" * 60)
-    print("EXTRACTING AND SAVING ALL EVENT IDs")
-    print("=" * 60)
+    print("Extracting event IDs and commence times...")
+    event_data = extractor.extract_and_save_event_data()
 
-    all_event_ids = extractor.extract_and_save_event_ids()
+    if event_data:
+        print(f"✅ Successfully processed {len(event_data)} events")
 
-    if all_event_ids:
-        print(
-            f"\n✅ Successfully extracted and saved {len(all_event_ids)} unique event IDs"
-        )
-
-        # Show sample event IDs
-        sample_ids = list(all_event_ids)[:10]
-        print(f"\n📋 Sample Event IDs:")
-        for i, event_id in enumerate(sample_ids, 1):
-            print(f"{i:2d}. {event_id}")
-
-        if len(all_event_ids) > 10:
-            print(f"   ... and {len(all_event_ids) - 10} more")
-
-        # Get details for sample events
-        print(f"\n📊 Getting details for sample events...")
-        sample_details = extractor.get_event_details(set(sample_ids))
-
-        print(f"\n📋 Sample Event Details:")
-        for i, (event_id, details) in enumerate(sample_details.items(), 1):
-            print(f"{i:2d}. {details.get('away_team')} @ {details.get('home_team')}")
-            print(f"    ID: {event_id}")
-            print(f"    Commence: {details.get('commence_time')}")
-            print()
-
-        # Example: Filter by date range and save
-        print("=" * 60)
-        print("EXTRACTING EVENT IDs BY DATE RANGE AND SAVING")
-        print("=" * 60)
-
-        # Example: Last 7 days
-        end_date = date.today()
-        start_date = end_date - timedelta(days=7)
-
-        recent_event_ids = extractor.extract_and_save_event_ids(
-            start_date=start_date, end_date=end_date, target_date=end_date
-        )
-        print(f"\n✅ Found and saved {len(recent_event_ids)} events in the last 7 days")
-
-        # Example: Save for a specific date
-        print("=" * 60)
-        print("SAVING EVENT IDs FOR SPECIFIC DATE")
-        print("=" * 60)
-
-        specific_date = date.today() - timedelta(days=1)  # Yesterday
-        specific_event_ids = extractor.extract_and_save_event_ids(
-            start_date=specific_date, end_date=specific_date, target_date=specific_date
-        )
-        print(
-            f"\n✅ Found and saved {len(specific_event_ids)} events for {specific_date}"
-        )
-
+        # Show just a few sample events
+        sample_items = list(event_data.items())[:3]
+        print(f"\nSample events:")
+        for i, (event_id, commence_time) in enumerate(sample_items, 1):
+            print(f"{i}. ID: {event_id[:20]}... | Commence: {commence_time}")
     else:
-        print("❌ No event IDs found")
+        print("❌ No event data found")
 
 
 if __name__ == "__main__":
