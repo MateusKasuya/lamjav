@@ -1,0 +1,120 @@
+# Production configuration for data ingestion jobs
+environment: prod
+bucket_name: lamjav_storage
+
+# API rate limits (seconds between calls)
+api_rate_limits:
+  nba: 1.0      # 1 second between NBA API calls
+  odds: 2.0     # 2 seconds between Odds API calls (more expensive)
+
+# Job configurations organized by frequency
+schedules:
+  
+  # Historical jobs (run once for backfill)
+  historical:
+    nba:
+      games:
+        start_date: "2024-10-22"
+        batch_size: 30  # days per batch
+        api_rate_limit: 2.0
+      game_player_stats:
+        start_date: "2024-10-22"
+        batch_size: 7   # smaller batches due to volume
+        api_rate_limit: 5.0  # slower for stats
+    odds:
+      historical_events:
+        start_date: "2024-10-22"
+        api_rate_limit: 5.0
+      historical_event_odds:
+        markets: [
+          "player_points", "player_rebounds", "player_assists",
+          "player_threes", "player_blocks", "player_steals"
+        ]
+        api_rate_limit: 10.0  # very expensive endpoint
+
+  # Daily jobs (run 1-2x per day)
+  daily:
+    schedule: "0 6,18 * * *"  # 6 AM and 6 PM UTC
+    jobs:
+      nba:
+        - table: teams
+          api_rate_limit: 1.0
+        - table: players
+          api_rate_limit: 1.0
+          params:
+            active_only: true
+        - table: games
+          api_rate_limit: 1.0
+        - table: game_player_stats
+          api_rate_limit: 2.0
+        - table: player_injuries
+          api_rate_limit: 1.0
+        - table: season_averages
+          api_rate_limit: 1.0
+        - table: team_standings
+          api_rate_limit: 1.0
+      odds:
+        - table: sports
+          api_rate_limit: 2.0
+        - table: participants
+          api_rate_limit: 2.0
+        - table: odds
+          api_rate_limit: 3.0
+
+  # Intraday jobs (run multiple times per day)
+  intraday:
+    schedules:
+      high_frequency:   # Every 30 minutes during game hours
+        schedule: "*/30 12-23 * * *"  # 12 PM to 11 PM UTC
+        jobs:
+          odds:
+            - table: odds
+              api_rate_limit: 1.0
+              markets: ["h2h", "spreads", "totals"]
+      
+      medium_frequency:  # Every 2 hours
+        schedule: "0 */2 * * *"
+        jobs:
+          nba:
+            - table: games
+              api_rate_limit: 0.5
+            - table: player_injuries
+              api_rate_limit: 0.5
+
+# Cloud deployment configuration
+deployment:
+  cloud_functions:
+    memory: 512MB
+    timeout: 540s  # 9 minutes max
+    runtime: python311
+    
+  cloud_run:
+    memory: 2GB
+    timeout: 3600s  # 1 hour max
+    cpu: 2
+    runtime: python311
+    
+  cloud_scheduler:
+    timezone: "UTC"
+    retry_attempts: 3
+    retry_delay: "60s"
+
+# Monitoring and alerting
+monitoring:
+  error_threshold: 10  # Alert if >10% error rate
+  latency_threshold: 300  # Alert if >5 min latency
+  slack_webhook: "${SLACK_WEBHOOK_URL}"
+  
+# BigQuery configuration
+bigquery:
+  project_id: "${GCP_PROJECT_ID}"
+  datasets:
+    raw: 
+      nba: "nba_raw"
+      odds: "odds_raw"
+    staging:
+      nba: "nba_staging"  
+      odds: "odds_staging"
+    marts:
+      nba: "nba_marts"
+      odds: "odds_marts" 
