@@ -1,0 +1,81 @@
+[sqlfluff]
+# Versão do SQLFluff
+version = 3.4.2
+
+# Dialeto SQL - BigQuery é comum para projetos com GCS
+dialect = bigquery
+
+# Configurações de templates - habilitando DBT
+templater = dbt
+
+# Configurações de indentação
+indent_unit = space
+tab_space_size = 4
+
+# Tamanho máximo da linha
+max_line_length = 120
+
+# Configurações de capitalização
+capitalisation_policy = upper
+
+# Excluir diretórios/arquivos
+exclude_rules = None
+
+[sqlfluff:indentation]
+# Configurações específicas de indentação
+indented_joins = false
+indented_ctes = false
+template_blocks_indent = true
+
+[sqlfluff:layout:type:comma]
+# Vírgulas no final da linha
+line_position = trailing
+
+[sqlfluff:rules]
+# Configurações específicas de regras
+
+# Permitir colunas ordenadas (útil para SELECT *)
+allow_scalar = true
+
+# Configuração para nomes de tabelas e colunas
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.keywords]
+# Palavras-chave em maiúscula
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+# Identificadores (nomes de tabelas, colunas) em minúscula
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+# Funções em maiúscula
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.literals]
+# Literais em minúscula
+capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+# Exigir alias para tabelas
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+# Alias para colunas quando necessário
+aliasing = explicit
+
+[sqlfluff:rules:ambiguous.column_references]
+# Evitar referências ambíguas de colunas
+group_by_and_order_by_style = explicit
+
+[sqlfluff:templater:dbt]
+# Configurações específicas do DBT
+project_dir = ./
+profiles_dir = ./
+profile = lamjav_dbt
+target = dev
+
+# Variáveis do DBT (você pode personalizar conforme necessário)
+[sqlfluff:templater:dbt:context]
+# Adicione variáveis do seu projeto DBT aqui se necessário
+# my_variable = "my_value" 

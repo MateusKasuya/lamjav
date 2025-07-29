@@ -1,0 +1,43 @@
+# Dependências e ambientes virtuais
+.venv/
+venv/
+env/
+.env
+__pycache__/
+*.pyc
+
+# Arquivos de configuração e logs
+*.log
+.DS_Store
+.git/
+.gitignore
+
+# Diretórios de build e distribuição
+dist/
+build/
+*.egg-info/
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.bak
+
+# Documentação
+*.md
+*.rst
+*.txt
+
+# Arquivos DBT gerados
+target/
+dbt_packages/
+logs/
+
+# Arquivos de teste temporários
+test_*.sql
+*_test.sql
+*.test.sql
+
+# Arquivos de configuração específicos
+.sqlfluff
+pyproject.toml
+poetry.lock 
