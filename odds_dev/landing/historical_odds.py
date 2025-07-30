@@ -10,7 +10,7 @@ it to S3 in the bronze layer of the data lake.
 import sys
 import os
 from typing import NoReturn
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -54,7 +54,7 @@ def main() -> NoReturn:
             hour=12, minute=0, second=0, microsecond=0
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        print(f"⚠️  WARNING: This will cost 30 credits (3 markets x 10 credits each)!")
+        print("⚠️  WARNING: This will cost 30 credits (3 markets x 10 credits each)!")
         print(f"📅 Fetching historical data for: {historical_date}")
 
         # Fetch NBA historical odds data from API
@@ -75,14 +75,14 @@ def main() -> NoReturn:
         # So we can use the data directly without conversion
         data = response
 
-        # Convert data to JSON format
-        json_data = smartbetting.convert_to_json(data)
+        # Convert data to NDJSON format for BigQuery compatibility
+        ndjson_data = smartbetting.convert_to_ndjson(data)
 
-        # Upload JSON data to GCS
+        # Upload NDJSON data to GCS
         # Include the historical date in the filename
         date_str = historical_date.split("T")[0]  # Extract just the date part
         gcs_key = f"{catalog}/{schema}/{table}/{table}_{date_str}.json"
-        smartbetting.upload_json_to_gcs(json_data, bucket, gcs_key)
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_key)
 
         # Extract metadata for logging
         timestamp = data.get("timestamp", "Unknown")

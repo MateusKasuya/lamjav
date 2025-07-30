@@ -35,6 +35,26 @@ class SmartbettingLib:
         print("Converting to JSON...")
         return json.dumps(data, indent=2)
 
+    def convert_to_ndjson(self, data: Union[List[dict], dict]) -> str:
+        """
+        Convert data to NEWLINE DELIMITED JSON format for BigQuery external tables.
+
+        Args:
+            data: Data to be converted to NDJSON. Can be a list of dictionaries
+                  or a single dictionary.
+
+        Returns:
+            NDJSON string representation of the data (one JSON object per line)
+
+        Raises:
+            TypeError: If the data cannot be serialized to JSON
+        """
+        print("Converting to NDJSON...")
+        if isinstance(data, list):
+            return "\n".join(json.dumps(item) for item in data)
+        else:
+            return json.dumps(data)
+
     def convert_object_to_dict(self, objects: List[Any]) -> List[dict]:
         """
         Convert a list of objects to a list of dictionaries.

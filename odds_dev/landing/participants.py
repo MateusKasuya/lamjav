@@ -55,12 +55,12 @@ def main() -> NoReturn:
         # So we can use the data directly without conversion
         data = response
 
-        # Convert data to JSON format
-        json_data = smartbetting.convert_to_json(data)
+        # Convert data to NDJSON format for BigQuery compatibility
+        ndjson_data = smartbetting.convert_to_ndjson(data)
 
-        # Upload JSON data to GCS
+        # Upload NDJSON data to GCS
         gcs_key = f"{catalog}/{schema}/{table}/{table}_{date.today().strftime('%Y-%m-%d')}.json"
-        smartbetting.upload_json_to_gcs(json_data, bucket, gcs_key)
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_key)
 
         print(
             f"Successfully processed and uploaded {len(data)} NBA participants to GCS"

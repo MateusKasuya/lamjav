@@ -7,9 +7,7 @@ This module provides a wrapper around The Odds API for sports betting data retri
 import requests
 from dotenv import load_dotenv
 import os
-from typing import List, Optional, Any, Dict, Callable, TypeVar
-import time
-from datetime import date
+from typing import List, Optional, Any, Dict, TypeVar
 
 load_dotenv()
 
@@ -392,7 +390,7 @@ class TheOddsAPILib:
                 f"/historical/sports/{sport}/odds", params, "get_historical_odds"
             )
 
-            print(f"Successfully fetched historical odds data")
+            print("Successfully fetched historical odds data")
             print(f"Snapshot timestamp: {historical_data.get('timestamp')}")
             print(f"Data points: {len(historical_data.get('data', []))}")
 
@@ -447,7 +445,7 @@ class TheOddsAPILib:
                 f"/historical/sports/{sport}/events", params, "get_historical_events"
             )
 
-            print(f"Successfully fetched historical events data")
+            print("Successfully fetched historical events data")
             print(f"Snapshot timestamp: {historical_events.get('timestamp')}")
             print(f"Events found: {len(historical_events.get('data', []))}")
 

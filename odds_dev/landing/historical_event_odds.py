@@ -8,7 +8,7 @@ to Google Cloud Storage in the odds/landing/historical_event_odds folder.
 
 import sys
 import os
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from datetime import date, datetime, timedelta
 import json
 import time
@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.theoddsapi import TheOddsAPILib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema, Table
+from lib_dev.utils import Bucket, Catalog, Schema
 
 
 class HistoricalEventOddsExtractor:
@@ -194,11 +194,11 @@ class HistoricalEventOddsExtractor:
         gcs_path = f"{self.catalog}/{self.schema}/{self.table}/{filename}"
 
         try:
-            # Convert data to JSON format
-            json_data = self.smartbetting.convert_to_json(odds_data)
+            # Convert data to NDJSON format for BigQuery compatibility
+            ndjson_data = self.smartbetting.convert_to_ndjson(odds_data)
 
             # Upload to GCS
-            self.smartbetting.upload_json_to_gcs(json_data, self.bucket, gcs_path)
+            self.smartbetting.upload_json_to_gcs(ndjson_data, self.bucket, gcs_path)
 
             print(f"✅ Saved odds for event {event_id} to {gcs_path}")
             return gcs_path
@@ -274,7 +274,7 @@ class HistoricalEventOddsExtractor:
                 print(f"❌ Error processing event {event_id}: {e}")
                 continue
 
-        print(f"\n✅ Extraction completed:")
+        print("\n✅ Extraction completed:")
         print(f"   Processed: {processed}")
         print(f"   Saved: {len(saved_files)}")
         print(f"   Failed: {failed}")

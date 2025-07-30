@@ -1,0 +1,81 @@
+version: 2
+
+sources:
+  - name: nba
+    description: "NBA data from external tables in Google Cloud Storage"
+    tables:
+      - name: raw_teams
+        description: "NBA teams raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://lamjav_storage/nba/landing/teams/teams_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: id
+            description: "Unique team identifier"
+            data_type: integer
+          - name: name
+            description: "Team name"
+            data_type: string
+          - name: full_name
+            description: "Team full name"
+            data_type: string
+          - name: abbreviation
+            description: "Team abbreviation"
+            data_type: string
+          - name: city
+            description: "Team city"
+            data_type: string
+          - name: conference
+            description: "Conference (Eastern or Western)"
+            data_type: string
+          - name: division
+            description: "Division within conference"
+            data_type: string
+
+      - name: raw_active_players
+        description: "NBA active players raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://lamjav_storage/nba/landing/active_players/active_players_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: id
+            description: "Unique player identifier"
+            data_type: integer
+          - name: first_name
+            description: "Player first name"
+            data_type: string
+          - name: last_name
+            description: "Player last name"
+            data_type: string
+          - name: position
+            description: "Player position"
+            data_type: string
+          - name: height
+            description: "Player height"
+            data_type: string
+          - name: weight
+            description: "Player weight"
+            data_type: string
+          - name: jersey_number
+            description: "Player jersey number"
+            data_type: string
+          - name: college
+            description: "Player college"
+            data_type: string
+          - name: country
+            description: "Player country"
+            data_type: string
+          - name: draft_year
+            description: "Draft year"
+            data_type: integer
+          - name: draft_round
+            description: "Draft round"
+            data_type: integer
+          - name: draft_number
+            description: "Draft number"
+            data_type: integer
+          - name: team
+            description: "Player team information (STRUCT with id, name, abbreviation, etc.)"
+            data_type: struct 

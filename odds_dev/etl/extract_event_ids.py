@@ -10,7 +10,7 @@ odds/transformation/historical_event_id folder.
 import sys
 import os
 from typing import List, Set, Dict, Any
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 import json
 
 # Add the project root to the Python path
@@ -278,7 +278,7 @@ def main():
 
         # Show just a few sample events
         sample_items = list(event_data.items())[:3]
-        print(f"\nSample events:")
+        print("\nSample events:")
         for i, (event_id, commence_time) in enumerate(sample_items, 1):
             print(f"{i}. ID: {event_id[:20]}... | Commence: {commence_time}")
     else:

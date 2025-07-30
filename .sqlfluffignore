@@ -41,3 +41,5 @@ test_*.sql
 .sqlfluff
 pyproject.toml
 poetry.lock 
+
+nba_dev/external_tables

@@ -66,13 +66,13 @@ def main() -> NoReturn:
         else:
             data = response  # Already in dictionary format
 
-        # Convert data to JSON format
-        json_data = smartbetting.convert_to_json(data)
+        # Convert data to NDJSON format for BigQuery compatibility
+        ndjson_data = smartbetting.convert_to_ndjson(data)
 
-        # Upload JSON data to Google Cloud Storage
+        # Upload NDJSON data to Google Cloud Storage
         extraction_date = date.today().strftime("%Y-%m-%d")
         gcs_blob_name = f"{catalog}/{schema}/{table}/season_averages_{category}_{type_param}_{season}_{extraction_date}.json"
-        smartbetting.upload_json_to_gcs(json_data, bucket, gcs_blob_name)
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
         print(
             f"Successfully processed and uploaded {len(data)} season averages to Google Cloud Storage"

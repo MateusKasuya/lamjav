@@ -11,7 +11,7 @@ landing layer of the data lake.
 import sys
 import os
 from typing import NoReturn
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -90,12 +90,12 @@ def main() -> NoReturn:
             # So we can use the data directly without conversion
             data = events_data
 
-            # Convert data to JSON format
-            json_data = smartbetting.convert_to_json(data)
+            # Convert data to NDJSON format for BigQuery compatibility
+            ndjson_data = smartbetting.convert_to_ndjson(data)
 
-            # Upload JSON data to Google Cloud Storage
+            # Upload NDJSON data to Google Cloud Storage
             gcs_blob_name = f"{catalog}/{schema}/{table}/{table}_{current_date.strftime('%Y-%m-%d')}.json"
-            smartbetting.upload_json_to_gcs(json_data, bucket, gcs_blob_name)
+            smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
             # Extract metadata for logging
             timestamp = response.get("timestamp", "Unknown")
@@ -112,7 +112,7 @@ def main() -> NoReturn:
             # Move to next date
             current_date += timedelta(days=1)
 
-        print(f"\nPipeline completed!")
+        print("\nPipeline completed!")
         print(f"Total historical events processed: {total_events_processed}")
         print(f"Total API requests made: {total_requests_made}")
         print(f"Total credits used: {total_requests_made}")

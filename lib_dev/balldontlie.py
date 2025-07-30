@@ -19,8 +19,11 @@ from typing import List, Optional, Any, Dict, Callable, TypeVar
 import time
 from datetime import date
 import requests
+from pathlib import Path
 
-load_dotenv()
+# Load .env from project root
+project_root = Path(__file__).parent.parent
+load_dotenv(project_root / ".env")
 
 T = TypeVar("T")
 
@@ -108,7 +111,7 @@ class BalldontlieLib:
         while retry_count < max_retries:
             try:
                 return operation()
-            except RateLimitError as e:
+            except RateLimitError:
                 retry_count += 1
                 delay = base_delay**retry_count + extra_delay
                 print(
@@ -197,7 +200,7 @@ class BalldontlieLib:
                         time.sleep(page_delay)
                         break  # Success, exit retry loop
 
-                    except RateLimitError as e:
+                    except RateLimitError:
                         retry_count += 1
                         delay = base_delay**retry_count + extra_delay
                         print(

@@ -54,12 +54,12 @@ def main() -> NoReturn:
         # Convert API response to dictionary format
         data = smartbetting.convert_object_to_dict(response)
 
-        # Convert data to JSON format
-        json_data = smartbetting.convert_to_json(data)
+        # Convert data to NDJSON format for BigQuery compatibility
+        ndjson_data = smartbetting.convert_to_ndjson(data)
 
-        # Upload JSON data to Google Cloud Storage
+        # Upload NDJSON data to Google Cloud Storage
         gcs_blob_name = f"{catalog}/{schema}/{table}/{table}_{date.today().strftime('%Y-%m-%d')}.json"
-        smartbetting.upload_json_to_gcs(json_data, bucket, gcs_blob_name)
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
         print(
             f"Successfully processed and uploaded {len(data)} players to Google Cloud Storage"

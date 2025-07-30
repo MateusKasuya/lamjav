@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema, Table
+from lib_dev.utils import Bucket, Catalog, Schema
 
 
 def main() -> NoReturn:
@@ -58,15 +58,15 @@ def main() -> NoReturn:
         # Convert API response to dictionary format
         data = smartbetting.convert_object_to_dict(response)
 
-        # Convert data to JSON format
-        json_data = smartbetting.convert_to_json(data)
+        # Convert data to NDJSON format for BigQuery compatibility
+        ndjson_data = smartbetting.convert_to_ndjson(data)
 
-        # Upload JSON data to Google Cloud Storage
+        # Upload NDJSON data to Google Cloud Storage
         extraction_date = date.today().strftime("%Y-%m-%d")
         gcs_blob_name = (
             f"{catalog}/{schema}/{table}/team_standings_{season}_{extraction_date}.json"
         )
-        smartbetting.upload_json_to_gcs(json_data, bucket, gcs_blob_name)
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
         print(
             f"Successfully processed and uploaded {len(data)} team standings to Google Cloud Storage"

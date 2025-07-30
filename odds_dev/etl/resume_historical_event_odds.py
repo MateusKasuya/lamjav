@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.theoddsapi import TheOddsAPILib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema, Table
+from lib_dev.utils import Bucket, Catalog, Schema
 
 
 class ResumeHistoricalEventOddsExtractor:
@@ -261,11 +261,11 @@ class ResumeHistoricalEventOddsExtractor:
         gcs_path = f"{self.catalog}/{self.schema}/{self.table}/{filename}"
 
         try:
-            # Convert data to JSON format
-            json_data = self.smartbetting.convert_to_json(odds_data)
+            # Convert data to NDJSON format for BigQuery compatibility
+            ndjson_data = self.smartbetting.convert_to_ndjson(odds_data)
 
             # Upload to GCS
-            self.smartbetting.upload_json_to_gcs(json_data, self.bucket, gcs_path)
+            self.smartbetting.upload_json_to_gcs(ndjson_data, self.bucket, gcs_path)
 
             print(f"✅ Saved odds for event {event_id} to {gcs_path}")
             return gcs_path
@@ -348,7 +348,7 @@ class ResumeHistoricalEventOddsExtractor:
                 print(f"❌ Error processing event {event_id}: {e}")
                 continue
 
-        print(f"\n✅ Resume extraction completed:")
+        print("\n✅ Resume extraction completed:")
         print(f"   Processed: {processed}")
         print(f"   Saved: {len(saved_files)}")
         print(f"   Failed: {failed}")
