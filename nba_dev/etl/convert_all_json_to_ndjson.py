@@ -43,7 +43,7 @@ def convert_all_active_players():
 
     # List all active_players files
     active_players_files = list_json_files_in_gcs(
-        bucket_name, "nba/landing/active_players/"
+        bucket_name, "nba/landing/season_averages/"
     )
 
     print(f"Found {len(active_players_files)} active_players files to convert:")
@@ -94,7 +94,7 @@ def convert_all_nba_files():
     print("=" * 50)
     print("CONVERTING TEAMS")
     print("=" * 50)
-    convert_all_teams()
+    # convert_all_teams()
 
     # Convert active players
     print("\n" + "=" * 50)
