@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: bi_dev
+    description: "BI development dataset with processed data"
+    tables:
+      - name: de_para_players
+        description: "Player de-para mapping between injury_report and nba datasets"
+        columns:
+          - name: injury_player_name
+            description: "Player name from injury report"
+            data_type: string
+            tests:
+              - not_null
+          - name: nba_player_name
+            description: "Player name from NBA active players (last_name, first_name format)"
+            data_type: string
+          - name: nba_player_id
+            description: "Player ID from NBA active players"
+            data_type: integer
+          - name: similarity_score
+            description: "Fuzzy matching similarity score (0-100)"
+            data_type: integer
+            tests:
+              - not_null
+          - name: extraction_timestamp
+            description: "Timestamp when the data was extracted and loaded to BigQuery"
+            data_type: timestamp
+            tests:
+              - not_null

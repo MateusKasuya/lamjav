@@ -16,6 +16,7 @@ class Bucket(Enum):
     """
 
     LAMJAV_STORAGE = "lamjav_storage"
+    SMARTBETTING_STORAGE = "smartbetting-landing"
 
     def __str__(self) -> str:
         """
@@ -36,6 +37,7 @@ class Catalog(Enum):
 
     NBA = "nba"
     ODDS = "odds"
+    INJURY_REPORT = "injury_report"
 
     def __str__(self) -> str:
         """
@@ -55,6 +57,7 @@ class Schema(Enum):
     """
 
     LANDING = "landing"
+    RAW = "raw"
 
     def __str__(self) -> str:
         """
@@ -80,11 +83,14 @@ class Table(Enum):
     ACTIVE_PLAYERS = "active_players"
     PLAYER_INJURIES = "player_injuries"
     SEASON_AVERAGES = "season_averages"
+    ADVANCED_STATS = "advanced_stats"
+    LEADERS = "leaders"
     SPORTS = "sports"
     ODDS = "odds"
     PARTICIPANTS = "participants"
     HISTORICAL_ODDS = "historical_odds"
     HISTORICAL_EVENTS = "historical_events"
+    INJURY_REPORT = "injury_report"
 
     def __str__(self) -> str:
         """

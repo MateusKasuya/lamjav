@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: injury_report
+    description: "NBA injury report data from raw table in BigQuery"
+    tables:
+      - name: raw_injury_report
+        description: "NBA injury report raw data extracted from PDF files"
+        columns:
+          - name: player_name
+            description: "Player name in format 'Lastname, Firstname'"
+            data_type: string
+            tests:
+              - not_null
+          - name: current_status
+            description: "Current injury status (Out, Available, Questionable, Probable, Doubtful)"
+            data_type: string
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['Out', 'Available', 'Questionable', 'Probable', 'Doubtful']
+          - name: source_file
+            description: "Source PDF file path in Google Cloud Storage"
+            data_type: string
+            tests:
+              - not_null
+          - name: extraction_timestamp
+            description: "Timestamp when the data was extracted from the PDF"
+            data_type: timestamp
+            tests:
+              - not_null

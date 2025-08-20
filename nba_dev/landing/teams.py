@@ -8,14 +8,13 @@ it to S3 in the bronze layer of the data lake.
 import sys
 import os
 from typing import NoReturn
-from datetime import date
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema, Table
+from lib_dev.utils import Bucket, Catalog, Table
 
 
 def main() -> NoReturn:
@@ -35,9 +34,8 @@ def main() -> NoReturn:
         Exception: For any other unexpected errors during execution
     """
     # Initialize constants
-    bucket = Bucket.LAMJAV_STORAGE
+    bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
-    schema = Schema.LANDING
     table = Table.TEAMS
 
     # Initialize API clients
@@ -58,7 +56,7 @@ def main() -> NoReturn:
         ndjson_data = smartbetting.convert_to_ndjson(data)
 
         # Upload NDJSON data to GCS
-        gcs_key = f"{catalog}/{schema}/{table}/{table}_{date.today().strftime('%Y-%m-%d')}.json"
+        gcs_key = f"{catalog}/{table}/raw_{catalog}_{table}.json"
         smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_key)
 
         print(f"Successfully processed and uploaded {len(data)} teams to GCS")

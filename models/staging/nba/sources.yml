@@ -136,4 +136,122 @@ sources:
             data_type: string
           - name: stats
             description: "Season statistics (STRUCT with various statistical fields based on category/type)"
+            data_type: struct
+
+      - name: raw_games
+        description: "NBA games raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://lamjav_storage/nba/landing/games/games_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: id
+            description: "Unique game identifier"
+            data_type: integer
+          - name: date
+            description: "Game date (YYYY-MM-DD)"
+            data_type: string
+          - name: season
+            description: "Season year (e.g., 2018)"
+            data_type: integer
+          - name: status
+            description: "Game status (e.g., Final, InProgress, Scheduled)"
+            data_type: string
+          - name: period
+            description: "Current period/quarter (0-4)"
+            data_type: float
+          - name: time
+            description: "Time remaining in period"
+            data_type: string
+          - name: postseason
+            description: "Whether the game is a postseason game"
+            data_type: boolean
+          - name: home_team_score
+            description: "Home team final score"
+            data_type: float
+          - name: visitor_team_score
+            description: "Visitor team final score"
+            data_type: float
+          - name: home_team
+            description: "Home team information (STRUCT with id, name, abbreviation, conference, division, etc.)"
+            data_type: struct
+          - name: visitor_team
+            description: "Visitor team information (STRUCT with id, name, abbreviation, conference, division, etc.)"
+            data_type: struct
+
+      - name: raw_game_player_stats
+        description: "NBA game player stats raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://lamjav_storage/nba/landing/game_player_stats/game_player_stats_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: id
+            description: "Unique stat record identifier"
+            data_type: float
+          - name: min
+            description: "Minutes played (as string)"
+            data_type: string
+          - name: fgm
+            description: "Field goals made"
+            data_type: float
+          - name: fga
+            description: "Field goals attempted"
+            data_type: float
+          - name: fg_pct
+            description: "Field goal percentage"
+            data_type: float
+          - name: fg3m
+            description: "Three-pointers made"
+            data_type: float
+          - name: fg3a
+            description: "Three-pointers attempted"
+            data_type: float
+          - name: fg3_pct
+            description: "Three-point percentage"
+            data_type: float
+          - name: ftm
+            description: "Free throws made"
+            data_type: float
+          - name: fta
+            description: "Free throws attempted"
+            data_type: float
+          - name: ft_pct
+            description: "Free throw percentage"
+            data_type: float
+          - name: oreb
+            description: "Offensive rebounds"
+            data_type: float
+          - name: dreb
+            description: "Defensive rebounds"
+            data_type: float
+          - name: reb
+            description: "Total rebounds"
+            data_type: float
+          - name: ast
+            description: "Assists"
+            data_type: float
+          - name: stl
+            description: "Steals"
+            data_type: float
+          - name: blk
+            description: "Blocks"
+            data_type: float
+          - name: turnover
+            description: "Turnovers"
+            data_type: float
+          - name: pf
+            description: "Personal fouls"
+            data_type: float
+          - name: pts
+            description: "Points scored"
+            data_type: float
+          - name: player
+            description: "Player information (STRUCT with id, first_name, last_name, position, etc.)"
+            data_type: struct
+          - name: team
+            description: "Team information (STRUCT with id, name, abbreviation, conference, division, etc.)"
+            data_type: struct
+          - name: game
+            description: "Game information (STRUCT with id, date, season, status, etc.)"
             data_type: struct 

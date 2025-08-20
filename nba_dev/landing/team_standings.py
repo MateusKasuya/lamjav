@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema
+from lib_dev.utils import Bucket, Catalog
 
 
 def main() -> NoReturn:
@@ -34,9 +34,8 @@ def main() -> NoReturn:
         Exception: For any other unexpected errors during execution
     """
     # Initialize constants
-    bucket = Bucket.LAMJAV_STORAGE
+    bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
-    schema = Schema.LANDING
     table = "team_standings"  # Using string since it's not in the enum
 
     # Season parameter
@@ -63,9 +62,7 @@ def main() -> NoReturn:
 
         # Upload NDJSON data to Google Cloud Storage
         extraction_date = date.today().strftime("%Y-%m-%d")
-        gcs_blob_name = (
-            f"{catalog}/{schema}/{table}/team_standings_{season}_{extraction_date}.json"
-        )
+        gcs_blob_name = f"{catalog}/{table}/raw_{catalog}_{table}.json"
         smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
         print(

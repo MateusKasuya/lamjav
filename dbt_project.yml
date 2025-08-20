@@ -34,8 +34,33 @@ models:
     # Staging models configuration
     staging:
       +materialized: view
-      +schema: nba
+      # NBA staging models
+      nba:
+        +schema: nba
+      # Injury Report staging models  
+      injury_report:
+        +schema: injury_report
+      # Odds staging models
+      odds:
+        +schema: odds
+      # BI Dev staging models
+      bi_dev:
+        +schema: bi_dev
+    # Intermediate models configuration
+    intermediate:
+      +materialized: view
+      # NBA intermediate models
+      nba:
+        +schema: nba
+      # BI Dev intermediate models
+      bi_dev:
+        +schema: bi_dev
     # Marts models configuration
     marts:
       +materialized: table
-      +schema: nba
+      # NBA marts models
+      nba:
+        +schema: nba
+      # BI marts models
+      bi:
+        +schema: bi

@@ -47,6 +47,7 @@ class BalldontlieLib:
             ValueError: If the API key is not found in environment variables
         """
         api_key = os.getenv("BALLDONTLIE_API_KEY")
+
         if not api_key:
             raise ValueError("BALLDONTLIE_API_KEY environment variable is required")
 
@@ -216,6 +217,32 @@ class BalldontlieLib:
 
                     except Exception as e:
                         print(f"Unexpected error during pagination: {str(e)}")
+                        # Add more detailed error information for debugging
+                        if "HTTP 400" in str(e):
+                            print(
+                                "HTTP 400 Bad Request - This usually means invalid API parameters"
+                            )
+                            print(
+                                "Check the Balldontlie API documentation for valid parameter combinations"
+                            )
+                        elif "HTTP 422" in str(e):
+                            print(
+                                "HTTP 422 Validation Error - Check parameter values and formats"
+                            )
+                        elif "HTTP 502" in str(e) or "Bad Gateway" in str(e):
+                            print(
+                                "HTTP 502 Bad Gateway - Server is experiencing issues"
+                            )
+                            print("This is usually a temporary server-side problem")
+                            print("Consider waiting and retrying later")
+                        elif "HTTP 503" in str(e):
+                            print(
+                                "HTTP 503 Service Unavailable - Server is temporarily unavailable"
+                            )
+                        elif "HTTP 504" in str(e):
+                            print(
+                                "HTTP 504 Gateway Timeout - Server took too long to respond"
+                            )
                         break
 
                 # If no data was fetched or no more pages, break the main loop
@@ -310,9 +337,9 @@ class BalldontlieLib:
             operation_name="players",
             per_page=25,
             max_retries=5,
-            base_delay=2,
-            extra_delay=0,
-            page_delay=3,
+            base_delay=5,
+            extra_delay=10,
+            page_delay=5,
         )
 
     def get_active_players(self) -> Optional[List[Any]]:
@@ -331,9 +358,9 @@ class BalldontlieLib:
             operation_name="active players",
             per_page=25,
             max_retries=5,
-            base_delay=2,
-            extra_delay=5,
-            page_delay=3,
+            base_delay=5,
+            extra_delay=15,
+            page_delay=5,
         )
 
     def get_injuries(self) -> Optional[List[Any]]:
@@ -352,9 +379,9 @@ class BalldontlieLib:
             operation_name="player injuries",
             per_page=25,
             max_retries=5,
-            base_delay=2,
-            extra_delay=5,
-            page_delay=3,
+            base_delay=5,
+            extra_delay=15,
+            page_delay=5,
         )
 
     def get_season_averages(
@@ -426,9 +453,9 @@ class BalldontlieLib:
                 operation_name=f"season averages ({category}/{season_type}/{type_param})",
                 per_page=25,
                 max_retries=5,
-                base_delay=3,
-                extra_delay=8,
-                page_delay=3,
+                base_delay=8,
+                extra_delay=20,
+                page_delay=8,
             )
 
         except Exception as e:
@@ -456,7 +483,7 @@ class BalldontlieLib:
                 return response.data
 
             result = self._handle_rate_limit_with_retry(
-                operation=fetch_standings, max_retries=5, base_delay=2, extra_delay=5
+                operation=fetch_standings, max_retries=5, base_delay=5, extra_delay=15
             )
 
             if result is not None:
@@ -500,9 +527,83 @@ class BalldontlieLib:
             operation_name=f"games for {game_date}",
             per_page=25,
             max_retries=5,
-            base_delay=2,
-            extra_delay=5,
-            page_delay=2,
+            base_delay=8,
+            extra_delay=20,
+            page_delay=5,
+        )
+
+    def get_games_by_season(self, season: int) -> Optional[List[Any]]:
+        """
+        Retrieve all NBA games for a specific season from the API.
+
+        Fetches all NBA games for the specified season from the Balldontlie API.
+        Implements retry logic with exponential backoff for rate limit handling.
+
+        Args:
+            season: Season year (e.g., 2024)
+
+        Returns:
+            List of game objects if successful, None if an error occurs
+        """
+
+        def fetch_games_page(**params):
+            request_params = {
+                "per_page": params.get("per_page", 25),
+                "seasons": [season],
+            }
+
+            if "cursor" in params and params["cursor"] is not None:
+                request_params["cursor"] = params["cursor"]
+
+            return self.api.nba.games.list(**request_params)
+
+        return self._paginate_with_rate_limit(
+            fetch_page=fetch_games_page,
+            operation_name=f"games for season {season}",
+            per_page=25,
+            max_retries=5,
+            base_delay=8,
+            extra_delay=20,
+            page_delay=5,
+        )
+
+    def get_games_by_date_range(
+        self, start_date: date, end_date: date
+    ) -> Optional[List[Any]]:
+        """
+        Retrieve NBA games for a date range from the API.
+
+        Fetches all NBA games between the specified start and end dates from the Balldontlie API.
+        Implements retry logic with exponential backoff for rate limit handling.
+
+        Args:
+            start_date: Start date for the range
+            end_date: End date for the range
+
+        Returns:
+            List of game objects if successful, None if an error occurs
+        """
+
+        def fetch_games_page(**params):
+            request_params = {
+                "per_page": params.get("per_page", 25),
+                "start_date": start_date.strftime("%Y-%m-%d"),
+                "end_date": end_date.strftime("%Y-%m-%d"),
+            }
+
+            if "cursor" in params and params["cursor"] is not None:
+                request_params["cursor"] = params["cursor"]
+
+            return self.api.nba.games.list(**request_params)
+
+        return self._paginate_with_rate_limit(
+            fetch_page=fetch_games_page,
+            operation_name=f"games from {start_date} to {end_date}",
+            per_page=25,
+            max_retries=5,
+            base_delay=8,
+            extra_delay=20,
+            page_delay=5,
         )
 
     def get_stats(self, game_date: date) -> Optional[List[Any]]:
@@ -535,7 +636,155 @@ class BalldontlieLib:
             operation_name=f"player stats for {game_date}",
             per_page=25,
             max_retries=5,
-            base_delay=3,
-            extra_delay=8,
-            page_delay=3,
+            base_delay=8,
+            extra_delay=20,
+            page_delay=8,
         )
+
+    def get_advanced_stats(
+        self,
+        player_ids: Optional[List[int]] = None,
+        game_ids: Optional[List[int]] = None,
+        dates: Optional[List[date]] = None,
+        seasons: Optional[List[int]] = None,
+        postseason: Optional[bool] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        per_page: int = 25,
+    ) -> Optional[List[Any]]:
+        """
+        Retrieve NBA advanced stats from the API with flexible filtering options.
+
+        Fetches NBA advanced stats from the Balldontlie API using various filter parameters.
+        Implements retry logic with exponential backoff for rate limit handling.
+
+        Args:
+            player_ids: List of player IDs to filter by
+            game_ids: List of game IDs to filter by
+            dates: List of specific dates to filter by (YYYY-MM-DD format)
+            seasons: List of seasons to filter by (e.g., [2022, 2023])
+            postseason: Filter by postseason (True for playoffs, False for regular season, None for both)
+            start_date: Start date for date range filtering
+            end_date: End date for date range filtering
+            per_page: Number of results per page (max 100)
+
+        Returns:
+            List of advanced stats objects if successful, None if an error occurs
+        """
+        try:
+            print("Getting advanced stats...")
+
+            # Build filter parameters
+            filters = []
+            if player_ids:
+                filters.append(f"player_ids: {player_ids}")
+            if game_ids:
+                filters.append(f"game_ids: {game_ids}")
+            if dates:
+                filters.append(f"dates: {[d.strftime('%Y-%m-%d') for d in dates]}")
+            if seasons:
+                filters.append(f"seasons: {seasons}")
+            if postseason is not None:
+                filters.append(f"postseason: {postseason}")
+            if start_date:
+                filters.append(f"start_date: {start_date.strftime('%Y-%m-%d')}")
+            if end_date:
+                filters.append(f"end_date: {end_date.strftime('%Y-%m-%d')}")
+
+            if filters:
+                print(f"Applying filters: {', '.join(filters)}")
+
+            def fetch_advanced_stats_page(**params):
+                request_params = {
+                    "per_page": params.get("per_page", per_page),
+                }
+
+                # Add cursor for pagination
+                if "cursor" in params and params["cursor"] is not None:
+                    request_params["cursor"] = params["cursor"]
+
+                # Add player_ids filter - SDK expects list directly
+                if player_ids:
+                    request_params["player_ids"] = player_ids
+
+                # Add game_ids filter - SDK expects list directly
+                if game_ids:
+                    request_params["game_ids"] = game_ids
+
+                # Add dates filter - SDK expects list directly
+                if dates:
+                    request_params["dates"] = [d.strftime("%Y-%m-%d") for d in dates]
+
+                # Add seasons filter - SDK expects list directly
+                if seasons:
+                    request_params["seasons"] = seasons
+
+                # Add postseason filter
+                if postseason is not None:
+                    request_params["postseason"] = postseason
+
+                # Add date range filters
+                if start_date:
+                    request_params["start_date"] = start_date.strftime("%Y-%m-%d")
+                if end_date:
+                    request_params["end_date"] = end_date.strftime("%Y-%m-%d")
+
+                return self.api.nba.advanced_stats.list(**request_params)
+
+            return self._paginate_with_rate_limit(
+                fetch_page=fetch_advanced_stats_page,
+                operation_name="advanced stats",
+                per_page=per_page,
+                max_retries=5,
+                base_delay=8,
+                extra_delay=20,
+                page_delay=8,
+            )
+
+        except Exception as e:
+            self._handle_api_exceptions(e, "advanced stats retrieval")
+            return None
+
+    def get_leaders(
+        self,
+        stat_type: str,
+        season: int,
+    ) -> Optional[List[Any]]:
+        """
+        Retrieve NBA leaders for a specific stat type and season from the API.
+
+        Fetches NBA leaders data from the Balldontlie API for the specified stat type
+        and season. Implements retry logic with exponential backoff for rate limit handling.
+
+        Args:
+            stat_type: Type of stat to get leaders for (reb, dreb, tov, ast, oreb, min, pts, stl, blk)
+            season: Season year (e.g., 2023)
+
+        Returns:
+            List of leader objects if successful, None if an error occurs
+        """
+        try:
+            print(
+                f"Getting NBA leaders for stat_type: {stat_type}, season: {season}..."
+            )
+
+            def fetch_leaders():
+                response = self.api.nba.leaders.get(stat_type=stat_type, season=season)
+                return response.data
+
+            result = self._handle_rate_limit_with_retry(
+                operation=fetch_leaders, max_retries=5, base_delay=5, extra_delay=15
+            )
+
+            if result is not None:
+                print(
+                    f"Fetched {len(result)} leaders for {stat_type} in season {season}"
+                )
+                return result
+            else:
+                print(f"No leaders found for {stat_type} in season {season}")
+                return []
+
+        except Exception as e:
+            self._handle_api_exceptions(e, "leaders retrieval")
+            return None

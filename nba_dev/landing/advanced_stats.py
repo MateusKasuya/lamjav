@@ -1,7 +1,7 @@
 """
-NBA Games data pipeline script.
+NBA Advanced Stats data pipeline script.
 
-This script fetches NBA games data from the Balldontlie API for each day
+This script fetches NBA advanced stats data from the Balldontlie API for each day
 starting from 22/10/2024 and uploads it to Google Cloud Storage in the
 landing layer of the data lake.
 """
@@ -10,6 +10,7 @@ import sys
 import os
 from typing import NoReturn
 from datetime import date, timedelta
+import time
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -21,12 +22,13 @@ from lib_dev.utils import Bucket, Catalog, Table
 
 def main() -> NoReturn:
     """
-    Main function to execute the NBA games data pipeline.
+    Main function to execute the NBA advanced stats data pipeline.
 
     This function:
-    1. Fetches games data from Balldontlie API for each day starting from 22/10/2024
+    1. Fetches advanced stats data from Balldontlie API for each day starting from 22/10/2024
     2. Converts the data to the required format
     3. Uploads the data to Google Cloud Storage in the landing layer
+    4. Includes longer delays between each date extraction to avoid rate limiting
 
     Returns:
         None
@@ -38,10 +40,10 @@ def main() -> NoReturn:
     # Initialize constants
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
-    table = Table.GAMES
+    table = Table.ADVANCED_STATS
 
     # Set start date
-    start_date = date(2025, 3, 13)  # 22/10/2024
+    start_date = date(2025, 1, 1)
     end_date = date.today()  # Today's date
 
     # Initialize API clients
@@ -50,24 +52,28 @@ def main() -> NoReturn:
 
     try:
         current_date = start_date
-        total_games_processed = 0
+        total_stats_processed = 0
 
-        print(f"Starting games data pipeline from {start_date} to {end_date}")
+        print(f"Starting advanced stats data pipeline from {start_date} to {end_date}")
 
         while current_date <= end_date:
-            print(f"\nProcessing games for date: {current_date}")
+            print(f"\nProcessing advanced stats for date: {current_date}")
 
-            # Fetch games data from API for current date
-            response = balldontlie.get_games(current_date)
+            # Fetch advanced stats data from API for current date
+            response = balldontlie.get_advanced_stats(dates=[current_date])
 
             if response is None:
-                print(f"No games data received for {current_date}")
+                print(f"No advanced stats data received for {current_date}")
                 current_date += timedelta(days=1)
+                # Add small delay even when no data
+                time.sleep(2)
                 continue
 
             if len(response) == 0:
-                print(f"No games found for {current_date}")
+                print(f"No advanced stats found for {current_date}")
                 current_date += timedelta(days=1)
+                # Add small delay even when no data
+                time.sleep(2)
                 continue
 
             # Convert API response to dictionary format
@@ -81,17 +87,23 @@ def main() -> NoReturn:
             smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
             print(
-                f"Successfully processed and uploaded {len(data)} games for {current_date}"
+                f"Successfully processed and uploaded {len(data)} advanced stats for {current_date}"
             )
-            total_games_processed += len(data)
+            total_stats_processed += len(data)
+
+            # Add moderate delay between date extractions
+            print("Waiting 5 seconds before processing next date...")
+            time.sleep(5)
 
             # Move to next date
             current_date += timedelta(days=1)
 
-        print(f"\nPipeline completed! Total games processed: {total_games_processed}")
+        print(
+            f"\nPipeline completed! Total advanced stats processed: {total_stats_processed}"
+        )
 
     except Exception as e:
-        print(f"Error in games data pipeline: {str(e)}")
+        print(f"Error in advanced stats data pipeline: {str(e)}")
         raise
 
 

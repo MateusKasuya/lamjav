@@ -12,6 +12,7 @@ cleaned_data AS (
         id AS player_id,
         team.id AS team_id,
         TRIM(first_name || ' ' || last_name) AS full_name,
+        TRIM(last_name || ', ' || first_name) AS last_name_first,
         TRIM(position) AS position,
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data
