@@ -6,12 +6,12 @@
 -- Note: The 'team' field is automatically converted to STRUCT by BigQuery
 -- Access team fields using dot notation: team.id, team.name, team.abbreviation
 
-CREATE OR REPLACE EXTERNAL TABLE `lamjav.nba.raw_games`
+CREATE OR REPLACE EXTERNAL TABLE `smartbetting.nba.raw_games`
 OPTIONS (
   format = 'NEWLINE_DELIMITED_JSON',
-  uris = ['gs://lamjav_storage/nba/landing/games/games_*.json']
+  uris = ['gs://smartbetting-landing/nba/games/raw_nba_games_*.json']
 );
 
 -- Sample queries to test the external table:
--- SELECT * FROM `lamjav.nba.raw_games` LIMIT 10;
--- SELECT id, first_name, last_name, team.name as team_name FROM `lamjav.nba.raw_games` LIMIT 10;
+-- SELECT * FROM `smartbetting.nba.raw_games` LIMIT 10;
+-- SELECT id, first_name, last_name, team.name as team_name FROM `smartbetting.nba.raw_games` LIMIT 10;
