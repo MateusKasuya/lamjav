@@ -1,171 +1,32 @@
 """
 NBA Season Averages data pipeline script.
 
-This script fetches NBA season averages data from the Balldontlie API for
-ALL available category/type/season_type combinations and uploads to Google Cloud Storage.
+This script fetches NBA season averages data from the Balldontlie API for all
+category/type combinations and uploads it to Google Cloud Storage in the landing layer.
 """
 
 import sys
 import os
-from typing import NoReturn, List, Tuple
-from datetime import date
 import time
+from typing import NoReturn
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Table
-
-
-def get_all_combinations() -> List[Tuple[str, str, str]]:
-    """
-    Get all valid category/type/season_type combinations based on Balldontlie API documentation.
-
-    Returns:
-        List of tuples containing (category, type, season_type) combinations
-    """
-    combinations = [
-        # General category combinations
-        ("general", "base", "regular"),
-        ("general", "advanced", "regular"),
-        ("general", "usage", "regular"),
-        ("general", "scoring", "regular"),
-        ("general", "defense", "regular"),
-        ("general", "misc", "regular"),
-        # General category with other season types
-        ("general", "base", "playoffs"),
-        ("general", "advanced", "playoffs"),
-        ("general", "usage", "playoffs"),
-        ("general", "scoring", "playoffs"),
-        ("general", "defense", "playoffs"),
-        ("general", "misc", "playoffs"),
-        ("general", "base", "ist"),
-        ("general", "advanced", "ist"),
-        ("general", "usage", "ist"),
-        ("general", "scoring", "ist"),
-        ("general", "defense", "ist"),
-        ("general", "misc", "ist"),
-        ("general", "base", "playin"),
-        ("general", "advanced", "playin"),
-        ("general", "usage", "playin"),
-        ("general", "scoring", "playin"),
-        ("general", "defense", "playin"),
-        ("general", "misc", "playin"),
-        # Clutch category combinations
-        ("clutch", "advanced", "regular"),
-        ("clutch", "base", "regular"),
-        ("clutch", "misc", "regular"),
-        ("clutch", "scoring", "regular"),
-        ("clutch", "usage", "regular"),
-        ("clutch", "advanced", "playoffs"),
-        ("clutch", "base", "playoffs"),
-        ("clutch", "misc", "playoffs"),
-        ("clutch", "scoring", "playoffs"),
-        ("clutch", "usage", "playoffs"),
-        # Defense category combinations
-        ("defense", "2_pointers", "regular"),
-        ("defense", "3_pointers", "regular"),
-        ("defense", "greater_than_15ft", "regular"),
-        ("defense", "less_than_10ft", "regular"),
-        ("defense", "less_than_6ft", "regular"),
-        ("defense", "overall", "regular"),
-        ("defense", "2_pointers", "playoffs"),
-        ("defense", "3_pointers", "playoffs"),
-        ("defense", "greater_than_15ft", "playoffs"),
-        ("defense", "less_than_10ft", "playoffs"),
-        ("defense", "less_than_6ft", "playoffs"),
-        ("defense", "overall", "playoffs"),
-        # Shooting category combinations
-        ("shooting", "5ft_range", "regular"),
-        ("shooting", "by_zone", "regular"),
-        ("shooting", "5ft_range", "playoffs"),
-        ("shooting", "by_zone", "playoffs"),
-    ]
-
-    return combinations
-
-
-def fetch_and_upload_season_averages(
-    balldontlie: BalldontlieLib,
-    smartbetting: SmartbettingLib,
-    bucket: str,
-    catalog: str,
-    table: str,
-    category: str,
-    type_param: str,
-    season_type: str,
-    season: int,
-    extraction_date: str,
-) -> bool:
-    """
-    Fetch season averages for a specific combination and upload to GCS.
-
-    Args:
-        balldontlie: Balldontlie API client
-        smartbetting: Smartbetting client for GCS operations
-        bucket: GCS bucket name
-        catalog: Data catalog name
-        table: Table name
-        category: Season averages category
-        type_param: Season averages type
-        season_type: Season type
-        season: Season year
-        extraction_date: Date of extraction
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(
-            f"Processing: category={category}, type={type_param}, season_type={season_type}, season={season}"
-        )
-
-        # Fetch season averages data from API
-        response = balldontlie.get_season_averages(
-            category, season_type, type_param, season
-        )
-
-        if response is None or len(response) == 0:
-            print(
-                f"No data received for {category}/{type_param}/{season_type}/{season}"
-            )
-            return False
-
-        # Convert API response to dictionary format (if needed)
-        if response and hasattr(response[0], "model_dump"):
-            data = smartbetting.convert_object_to_dict(response)
-        else:
-            data = response  # Already in dictionary format
-
-        # Convert data to NDJSON format for BigQuery compatibility
-        ndjson_data = smartbetting.convert_to_ndjson(data)
-
-        # Upload NDJSON data to Google Cloud Storage
-        gcs_blob_name = f"{catalog}/{table}/raw_{catalog}_{table}_{category}_{type_param}_{season_type}_{season}_{extraction_date}.json"
-        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
-
-        print(
-            f"✅ Successfully uploaded {len(data)} records for {category}/{type_param}/{season_type}/{season}"
-        )
-        return True
-
-    except Exception as e:
-        print(
-            f"❌ Error processing {category}/{type_param}/{season_type}/{season}: {str(e)}"
-        )
-        return False
+from lib_dev.utils import Bucket, Catalog, Table, Season
 
 
 def main() -> NoReturn:
     """
-    Main function to fetch NBA season averages data for ALL combinations and upload to GCS.
+    Main function to execute the NBA season averages data pipeline.
 
     This function:
-    1. Fetches season averages for ALL valid category/type/season_type combinations
-    2. Uploads each combination to Google Cloud Storage with appropriate naming
-    3. Handles errors gracefully and continues with other combinations
+    1. Fetches season averages data for all category/type combinations
+    2. Converts the data to the required format
+    3. Uploads the data to Google Cloud Storage in the landing layer
+    4. Includes proper error handling and logging
 
     Returns:
         None
@@ -178,61 +39,137 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.SEASON_AVERAGES
-
-    # Season parameter
-    season = 2024
+    season = Season.SEASON_2024
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
     smartbetting = SmartbettingLib()
 
-    # Get all valid combinations
-    combinations = get_all_combinations()
-    extraction_date = date.today().strftime("%Y-%m-%d")
+    # Define all combinations
+    combinations = [
+        # General category
+        ("general", "base"),
+        ("general", "advanced"),
+        ("general", "usage"),
+        ("general", "scoring"),
+        ("general", "defense"),
+        ("general", "misc"),
+        # Clutch category
+        ("clutch", "advanced"),
+        ("clutch", "base"),
+        ("clutch", "misc"),
+        ("clutch", "scoring"),
+        ("clutch", "usage"),
+        # Defense category
+        ("defense", "2_pointers"),
+        ("defense", "3_pointers"),
+        ("defense", "greater_than_15ft"),
+        ("defense", "less_than_10ft"),
+        ("defense", "less_than_6ft"),
+        ("defense", "overall"),
+        # Shooting category
+        ("shooting", "5ft_range"),
+        ("shooting", "by_zone"),
+    ]
 
-    print(f"Starting extraction of {len(combinations)} season averages combinations...")
-    print(f"Season: {season}, Extraction date: {extraction_date}")
-    print("=" * 80)
-
-    successful_extractions = 0
-    failed_extractions = 0
+    # Define season types for each category
+    def get_season_types_for_category(category: str) -> list:
+        if category == "general":
+            return ["regular", "playoffs", "ist", "playin"]
+        elif category in ["clutch", "defense", "shooting"]:
+            return ["regular", "playoffs", "ist"]
+        else:
+            return ["regular", "playoffs", "ist"]
 
     try:
-        for i, (category, type_param, season_type) in enumerate(combinations, 1):
-            print(f"\n[{i}/{len(combinations)}] Processing combination...")
+        total_successful = 0
+        total_failed = 0
+        total_combinations = 0
 
-            success = fetch_and_upload_season_averages(
-                balldontlie=balldontlie,
-                smartbetting=smartbetting,
-                bucket=bucket,
-                catalog=catalog,
-                table=table,
-                category=category,
-                type_param=type_param,
-                season_type=season_type,
-                season=season,
-                extraction_date=extraction_date,
-            )
+        print(f"Starting NBA season averages data pipeline for season {season}")
+        print(f"Total combinations to process: {len(combinations)}")
+        print("=" * 80)
 
-            if success:
-                successful_extractions += 1
-            else:
-                failed_extractions += 1
+        for category, type_param in combinations:
+            season_types = get_season_types_for_category(category)
+            category_total = len(season_types)
+            total_combinations += category_total
 
-            # Add delay between API calls to respect rate limits
-            if i < len(combinations):  # Don't sleep after the last call
+            print(f"\n{'=' * 60}")
+            print(f"PROCESSING {category.upper()} CATEGORY")
+            print(f"{'=' * 60}")
+            print(f"Category: {category}")
+            print(f"Type: {type_param}")
+            print(f"Season Types: {season_types}")
+            print(f"Total combinations for this category: {category_total}")
+
+            category_successful = 0
+            category_failed = 0
+
+            for season_type in season_types:
+                try:
+                    print(
+                        f"\nProcessing: {category}/{type_param}/{season_type}/{season}"
+                    )
+
+                    # Fetch season averages data from API
+                    response = balldontlie.get_season_averages(
+                        category, season_type, type_param, season
+                    )
+
+                    if response is None or len(response) == 0:
+                        print(
+                            f"No data received for {category}/{type_param}/{season_type}/{season}"
+                        )
+                        category_failed += 1
+                        continue
+
+                    # Convert API response to dictionary format
+                    data = smartbetting.convert_object_to_dict(response)
+
+                    # Convert data to NDJSON format for BigQuery compatibility
+                    ndjson_data = smartbetting.convert_to_ndjson(data)
+
+                    # Generate storage path and blob name
+                    storage_path = f"{catalog}/{table}/{category}/{type_param}/{season_type}/{season}"
+                    gcs_blob_name = f"{storage_path}/raw_{catalog}_{table}_{category}_{type_param}_{season_type}_{season}.json"
+
+                    # Upload NDJSON data to Google Cloud Storage
+                    smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
+
+                    print(
+                        f"✅ Successfully uploaded {len(data)} records for {category}/{type_param}/{season_type}/{season}"
+                    )
+                    category_successful += 1
+
+                except Exception as e:
+                    print(
+                        f"❌ Error processing {category}/{type_param}/{season_type}/{season}: {str(e)}"
+                    )
+                    category_failed += 1
+
+                # Add delay between API calls to respect rate limits
                 time.sleep(2)
 
-        print("\n" + "=" * 80)
-        print("EXTRACTION SUMMARY:")
-        print(f"✅ Successful extractions: {successful_extractions}")
-        print(f"❌ Failed extractions: {failed_extractions}")
-        print(f"📊 Total combinations processed: {len(combinations)}")
-        print(f"📅 Extraction date: {extraction_date}")
+            # Print category summary
+            print(f"\n📊 {category.upper()} CATEGORY SUMMARY:")
+            print(f"✅ Successful: {category_successful}")
+            print(f"❌ Failed: {category_failed}")
+            print(f"📊 Total: {category_total}")
 
-        if successful_extractions > 0:
+            total_successful += category_successful
+            total_failed += category_failed
+
+        # Print overall summary
+        print("\n" + "=" * 80)
+        print("OVERALL EXTRACTION SUMMARY:")
+        print(f"✅ Total successful extractions: {total_successful}")
+        print(f"❌ Total failed extractions: {total_failed}")
+        print(f"📊 Total combinations processed: {total_combinations}")
+
+        if total_successful > 0:
             print(
-                f"\n🎉 Successfully extracted {successful_extractions} season averages datasets!"
+                f"\n🎉 Successfully extracted {total_successful} season averages datasets across all categories!"
             )
         else:
             print(
@@ -240,7 +177,7 @@ def main() -> NoReturn:
             )
 
     except Exception as e:
-        print(f"Critical error in season averages pipeline: {str(e)}")
+        print(f"Error in season averages data pipeline: {str(e)}")
         raise
 
 

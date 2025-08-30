@@ -91,6 +91,29 @@ class Table(Enum):
     HISTORICAL_ODDS = "historical_odds"
     HISTORICAL_EVENTS = "historical_events"
     INJURY_REPORT = "injury_report"
+    TEAM_STANDINGS = "team_standings"
+
+    def __str__(self) -> str:
+        """
+        Return the string representation of the table value.
+
+        Returns:
+            String value of the table
+        """
+        return "%s" % self.value
+
+
+class Season(Enum):
+    """
+    Season enumeration.
+
+    Defines the available seasons for data processing.
+    """
+
+    SEASON_2024 = 2024
+    SEASON_2025 = 2025
+    SEASON_2026 = 2026
+    SEASON_2027 = 2027
 
     def __str__(self) -> str:
         """

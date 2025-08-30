@@ -7,7 +7,7 @@ sources:
       - name: raw_teams
         description: "NBA teams raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/teams/teams_*.json"
+          location: "gs://smartbetting-landing/nba/teams/raw_nba_teams.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -36,7 +36,7 @@ sources:
       - name: raw_active_players
         description: "NBA active players raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/active_players/active_players_*.json"
+          location: "gs://smartbetting-landing/nba/active_players/raw_nba_active_players.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -83,7 +83,7 @@ sources:
       - name: raw_team_standings
         description: "NBA team standings raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/team_standings/team_standings_*.json"
+          location: "gs://smartbetting-landing/nba/team_standings/raw_nba_team_standings.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -118,10 +118,10 @@ sources:
             description: "Season year"
             data_type: integer
 
-      - name: raw_season_averages
-        description: "NBA season averages raw data from Balldontlie API (NDJSON format)"
+      - name: raw_season_averages_general_advanced
+        description: "NBA season averages general advanced raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/season_averages/season_averages_*.json"
+          location: "gs://smartbetting-landing/nba/season_averages/general/advanced/*/*/season_averages_general_advanced_*.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -141,7 +141,7 @@ sources:
       - name: raw_games
         description: "NBA games raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/games/games_*.json"
+          location: "gs://smartbetting-landing/nba/games/raw_nba_games_*.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -182,7 +182,7 @@ sources:
       - name: raw_game_player_stats
         description: "NBA game player stats raw data from Balldontlie API (NDJSON format)"
         external:
-          location: "gs://lamjav_storage/nba/landing/game_player_stats/game_player_stats_*.json"
+          location: "gs://smartbetting-landing/nba/game_player_stats/raw_nba_game_player_stats_*.json"
           options:
             format: NEWLINE_DELIMITED_JSON
         columns:
@@ -254,4 +254,27 @@ sources:
             data_type: struct
           - name: game
             description: "Game information (STRUCT with id, date, season, status, etc.)"
-            data_type: struct 
+            data_type: struct
+
+      - name: raw_leaders
+        description: "NBA leaders raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://smartbetting-landing/nba/leaders/raw_nba_leaders_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: player
+            description: "Player information (STRUCT with id, first_name, last_name, position, etc.)"
+            data_type: struct
+          - name: team
+            description: "Team information (STRUCT with id, name, abbreviation, conference, division, etc.)"
+            data_type: struct
+          - name: season
+            description: "Season year"
+            data_type: integer
+          - name: stat_type
+            description: "Type of statistical category"
+            data_type: string
+          - name: value
+            description: "Statistical value"
+            data_type: float 

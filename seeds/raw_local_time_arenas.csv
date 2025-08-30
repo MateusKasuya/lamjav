@@ -1,0 +1,31 @@
+Arena,Cidade,Time,Abbreviation,Fuso_Horario_Local,Horario_Local_Fixo,Horario_Brasilia
+Little Caesars Arena,Detroit,Detroit Pistons,DET,America/Detroit,13:30:00,15:30:00
+Scotiabank Arena,Toronto,Toronto Raptors,TOR,America/Toronto,13:30:00,15:30:00
+State Farm Arena,Atlanta,Atlanta Hawks,ATL,America/New_York,13:30:00,15:30:00
+TD Garden,Boston,Boston Celtics,BOS,America/New_York,13:30:00,15:30:00
+Kaseya Center,Miami,Miami Heat,MIA,America/New_York,13:30:00,15:30:00
+Madison Square Garden (IV),New York,New York Knicks,NYK,America/New_York,13:30:00,15:30:00
+Wells Fargo Center,Philadelphia,Philadelphia 76ers,PHI,America/New_York,13:30:00,15:30:00
+Gainbridge Fieldhouse,Indianapolis,Indiana Pacers,IND,America/Indiana/Indianapolis,13:30:00,15:30:00
+Kia Center,Orlando,Orlando Magic,ORL,America/New_York,13:30:00,15:30:00
+Barclays Center,Brooklyn,Brooklyn Nets,BKN,America/New_York,13:30:00,15:30:00
+Rocket Mortgage Fieldhouse,Cleveland,Cleveland Cavaliers,CLE,America/New_York,13:30:00,15:30:00
+Spectrum Center,Charlotte,Charlotte Hornets,CHA,America/New_York,13:30:00,15:30:00
+Capital One Arena,Washington,Washington Wizards,WAS,America/New_York,13:30:00,15:30:00
+Paycom Center,Oklahoma City,Oklahoma City Thunder,OKC,America/Chicago,13:30:00,16:30:00
+Toyota Center,Houston,Houston Rockets,HOU,America/Chicago,13:30:00,16:30:00
+Target Center,Minneapolis,Minnesota Timberwolves,MIN,America/Chicago,13:30:00,16:30:00
+American Airlines Center,Dallas,Dallas Mavericks,DAL,America/Chicago,13:30:00,16:30:00
+Smoothie King Center,New Orleans,New Orleans Pelicans,NOP,America/Chicago,13:30:00,16:30:00
+Fiserv Forum,Milwaukee,Milwaukee Bucks,MIL,America/Chicago,13:30:00,16:30:00
+United Center,Chicago,Chicago Bulls,CHI,America/Chicago,13:30:00,16:30:00
+Frost Bank Center,San Antonio,San Antonio Spurs,SAS,America/Chicago,13:30:00,16:30:00
+FedEx Forum,Memphis,Memphis Grizzlies,MEM,America/Chicago,13:30:00,16:30:00
+Delta Center,Salt Lake City,Utah Jazz,UTA,America/Denver,13:30:00,17:30:00
+Footprint Center,Phoenix,Phoenix Suns,PHX,America/Denver,13:30:00,17:30:00
+Ball Arena,Denver,Denver Nuggets,DEN,America/Denver,13:30:00,17:30:00
+Chase Center,San Francisco,Golden State Warriors,GSW,America/Los_Angeles,13:30:00,18:30:00
+Crypto.com Arena,Los Angeles,Los Angeles Lakers,LAL,America/Los_Angeles,13:30:00,18:30:00
+Moda Center,Portland,Portland Trail Blazers,POR,America/Los_Angeles,13:30:00,18:30:00
+Golden 1 Center,Sacramento,Sacramento Kings,SAC,America/Los_Angeles,13:30:00,18:30:00
+Intuit Dome,Los Angeles,Los Angeles Clippers,LAC,America/Los_Angeles,13:30:00,18:30:00

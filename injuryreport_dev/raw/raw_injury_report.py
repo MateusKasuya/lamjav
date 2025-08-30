@@ -114,7 +114,7 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
 
     # Configurações usando utils.py
     project_id = os.getenv("DBT_PROJECT")
-    bucket_name = str(Bucket.LAMJAV_STORAGE)
+    bucket_name = str(Bucket.SMARTBETTING_STORAGE)
     pdf_prefix = f"{str(Catalog.INJURY_REPORT)}/{str(Schema.LANDING)}/"
 
     dataset_id = str(Catalog.INJURY_REPORT)

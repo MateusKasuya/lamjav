@@ -12,15 +12,21 @@ cleaned_data AS (
         id AS game_id,
         --season,
         date AS game_date,
-
-        -- Game state information
+        datetime AS game_datetime,
+        -- Convert datetime to Brasília timezone (UTC-3)
         postseason AS is_postseason,
 
-        -- Home team information
+        -- Game state information
         home_team.id AS home_team_id,
 
-        -- Visitor team information
+        -- Home team information
         visitor_team.id AS visitor_team_id,
+
+        -- Visitor team information
+        CASE
+            WHEN datetime IS NOT null
+                THEN DATETIME_ADD(CAST(datetime AS DATETIME), INTERVAL -3 HOUR)
+        END AS game_datetime_brasilia,
 
         -- Scores (convert from FLOAT to INTEGER)
         CAST(home_team_score AS INTEGER) AS home_team_score,

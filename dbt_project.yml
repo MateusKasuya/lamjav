@@ -64,3 +64,9 @@ models:
       # BI marts models
       bi:
         +schema: bi
+
+# Seeds configuration
+seeds:
+  lamjav_dbt:
+    +schema: nba
+

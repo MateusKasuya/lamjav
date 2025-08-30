@@ -8,14 +8,13 @@ and seasons, then uploads the data to Google Cloud Storage in the landing layer.
 import sys
 import os
 from typing import NoReturn
-from datetime import date
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Table
+from lib_dev.utils import Bucket, Catalog, Table, Season
 
 
 def main() -> NoReturn:
@@ -42,7 +41,7 @@ def main() -> NoReturn:
 
     # Define stat types and seasons to fetch
     stat_types = ["pts", "reb", "ast", "stl", "blk", "min", "tov", "oreb", "dreb"]
-    seasons = [2024]  # Current season
+    seasons = [Season.SEASON_2024]  # Current season
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -84,10 +83,7 @@ def main() -> NoReturn:
                     ndjson_data = smartbetting.convert_to_ndjson(data)
 
                     # Upload NDJSON data to Google Cloud Storage
-                    extraction_date = date.today().strftime("%Y-%m-%d")
-                    gcs_blob_name = (
-                        f"{catalog}/{table}/raw_{catalog}_{table}_{stat_type}.json"
-                    )
+                    gcs_blob_name = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{stat_type}_{season}.json"
                     smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
                     print(

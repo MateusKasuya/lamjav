@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Table
+from lib_dev.utils import Bucket, Catalog, Table, Season
 
 
 def main() -> NoReturn:
@@ -37,6 +37,7 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.TEAMS
+    season = Season.SEASON_2024
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -56,7 +57,7 @@ def main() -> NoReturn:
         ndjson_data = smartbetting.convert_to_ndjson(data)
 
         # Upload NDJSON data to GCS
-        gcs_key = f"{catalog}/{table}/raw_{catalog}_{table}.json"
+        gcs_key = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{season}.json"
         smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_key)
 
         print(f"Successfully processed and uploaded {len(data)} teams to GCS")

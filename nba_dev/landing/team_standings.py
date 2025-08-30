@@ -8,14 +8,13 @@ the 2024 season and uploads to Google Cloud Storage.
 import sys
 import os
 from typing import NoReturn
-from datetime import date
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.balldontlie import BalldontlieLib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog
+from lib_dev.utils import Bucket, Catalog, Season, Table
 
 
 def main() -> NoReturn:
@@ -36,10 +35,10 @@ def main() -> NoReturn:
     # Initialize constants
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
-    table = "team_standings"  # Using string since it's not in the enum
+    table = Table.TEAM_STANDINGS
 
     # Season parameter
-    season = 2024
+    season = Season.SEASON_2024
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -61,8 +60,9 @@ def main() -> NoReturn:
         ndjson_data = smartbetting.convert_to_ndjson(data)
 
         # Upload NDJSON data to Google Cloud Storage
-        extraction_date = date.today().strftime("%Y-%m-%d")
-        gcs_blob_name = f"{catalog}/{table}/raw_{catalog}_{table}.json"
+        gcs_blob_name = (
+            f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{season}.json"
+        )
         smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
         print(

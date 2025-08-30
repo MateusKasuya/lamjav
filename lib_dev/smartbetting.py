@@ -248,3 +248,37 @@ class SmartbettingLib:
             dataset = bigquery.Dataset(f"{client.project}.{dataset_id}")
             dataset.location = "US"
             client.create_dataset(dataset, timeout=30)
+
+    def print_summary(
+        self,
+        successful_extractions: int,
+        failed_extractions: int,
+        total_combinations: int,
+        extraction_date: str,
+        category_name: str = "Season Averages",
+    ) -> None:
+        """
+        Print a summary of the extraction results.
+
+        Args:
+            successful_extractions: Number of successful extractions
+            failed_extractions: Number of failed extractions
+            total_combinations: Total number of combinations processed
+            extraction_date: Date of extraction
+            category_name: Name of the category being processed
+        """
+        print("\n" + "=" * 80)
+        print(f"{category_name.upper()} EXTRACTION SUMMARY:")
+        print(f"✅ Successful extractions: {successful_extractions}")
+        print(f"❌ Failed extractions: {failed_extractions}")
+        print(f"📊 Total combinations processed: {total_combinations}")
+        print(f"📅 Extraction date: {extraction_date}")
+
+        if successful_extractions > 0:
+            print(
+                f"\n🎉 Successfully extracted {successful_extractions} {category_name} season averages datasets!"
+            )
+        else:
+            print(
+                f"\n⚠️  No successful extractions for {category_name}. Check API configuration and parameters."
+            )

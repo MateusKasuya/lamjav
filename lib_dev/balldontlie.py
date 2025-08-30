@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 import os
 from typing import List, Optional, Any, Dict, Callable, TypeVar
 import time
-from datetime import date
+from datetime import date, timedelta
 import requests
 from pathlib import Path
 
@@ -567,6 +567,103 @@ class BalldontlieLib:
             page_delay=5,
         )
 
+    def get_games_with_datetime(
+        self, game_date: date
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        Retrieve NBA games for a specific date using direct requests to preserve datetime field.
+
+        This method bypasses the SDK to ensure all fields, including datetime, are preserved
+        in the raw JSON response before processing.
+
+        Args:
+            game_date: Date object for which to fetch games
+
+        Returns:
+            List of game dictionaries with datetime preserved if successful, None if an error occurs
+        """
+        try:
+            print(f"Getting games with datetime preservation for {game_date}...")
+
+            # Get API key from environment
+            api_key = os.getenv("BALLDONTLIE_API_KEY")
+            if not api_key:
+                raise ValueError("BALLDONTLIE_API_KEY environment variable is required")
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+
+            params = {
+                "dates[]": game_date.strftime("%Y-%m-%d"),
+                "per_page": 100,  # Get more games per page
+            }
+
+            all_games = []
+            cursor = None
+
+            while True:
+                if cursor:
+                    params["cursor"] = cursor
+
+                response = requests.get(
+                    "https://api.balldontlie.io/v1/games",
+                    headers=headers,
+                    params=params,
+                    timeout=30,
+                )
+
+                if response.status_code != 200:
+                    print(f"Error fetching games: {response.status_code}")
+                    break
+
+                data = response.json()
+                games = data.get("data", [])
+
+                if not games:
+                    break
+
+                all_games.extend(games)
+                print(f"Fetched {len(games)} games. Total: {len(all_games)}")
+
+                # Check for next page
+                meta = data.get("meta", {})
+                cursor = meta.get("next_cursor")
+
+                if not cursor:
+                    break
+
+                # Rate limiting
+                time.sleep(1)
+
+            if all_games:
+                # Verify datetime field is present
+                games_with_datetime = [g for g in all_games if g.get("datetime")]
+                games_without_datetime = [g for g in all_games if not g.get("datetime")]
+
+                print(f"  Games with datetime: {len(games_with_datetime)}")
+                print(f"  Games without datetime: {len(games_without_datetime)}")
+
+                if games_with_datetime:
+                    # Show example of datetime field
+                    example_game = games_with_datetime[0]
+                    print(f"  Example datetime: {example_game.get('datetime')}")
+
+                print(
+                    f"Total games fetched with datetime preservation: {len(all_games)}"
+                )
+                return all_games
+            else:
+                print(f"No games found for {game_date}")
+                return []
+
+        except Exception as e:
+            self._handle_api_exceptions(
+                e, f"games with datetime retrieval for {game_date}"
+            )
+            return None
+
     def get_games_by_date_range(
         self, start_date: date, end_date: date
     ) -> Optional[List[Any]]:
@@ -605,6 +702,55 @@ class BalldontlieLib:
             extra_delay=20,
             page_delay=5,
         )
+
+    def get_games_by_date_range_with_datetime(
+        self, start_date: date, end_date: date
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        Retrieve NBA games for a date range using direct requests to preserve datetime field.
+
+        This method bypasses the SDK to ensure all fields, including datetime, are preserved
+        in the raw JSON response before processing.
+
+        Args:
+            start_date: Start date for the range
+            end_date: End date for the range
+
+        Returns:
+            List of game dictionaries with datetime preserved if successful, None if an error occurs
+        """
+        try:
+            print(
+                f"Getting games with datetime preservation from {start_date} to {end_date}..."
+            )
+
+            all_games = []
+            current_date = start_date
+
+            while current_date <= end_date:
+                print(f"Processing games for date: {current_date}")
+
+                games = self.get_games_with_datetime(current_date)
+                if games:
+                    all_games.extend(games)
+                    print(
+                        f"Added {len(games)} games for {current_date}. Total: {len(all_games)}"
+                    )
+
+                # Move to next date
+                current_date += timedelta(days=1)
+
+                # Rate limiting between dates
+                time.sleep(1)
+
+            print(f"Total games fetched with datetime preservation: {len(all_games)}")
+            return all_games
+
+        except Exception as e:
+            self._handle_api_exceptions(
+                e, f"games with datetime retrieval from {start_date} to {end_date}"
+            )
+            return None
 
     def get_stats(self, game_date: date) -> Optional[List[Any]]:
         """
@@ -788,3 +934,273 @@ class BalldontlieLib:
         except Exception as e:
             self._handle_api_exceptions(e, "leaders retrieval")
             return None
+
+
+class SeasonAveragesProcessor:
+    """
+    A specialized class for processing NBA season averages data.
+
+    This class encapsulates all the logic for fetching, processing, and organizing
+    season averages data from the Balldontlie API.
+    """
+
+    def __init__(self, balldontlie_client: BalldontlieLib, smartbetting_client: Any):
+        """
+        Initialize the SeasonAveragesProcessor.
+
+        Args:
+            balldontlie_client: Initialized BalldontlieLib client
+            smartbetting_client: Initialized SmartbettingLib client
+        """
+        self.balldontlie = balldontlie_client
+        self.smartbetting = smartbetting_client
+
+    def get_all_combinations(self) -> List[tuple]:
+        """
+        Get all valid category/type combinations for season averages.
+
+        Returns:
+            List of tuples containing (category, type) combinations
+        """
+        combinations = [
+            # General category
+            ("general", "base"),
+            ("general", "advanced"),
+            ("general", "usage"),
+            ("general", "scoring"),
+            ("general", "defense"),
+            ("general", "misc"),
+            # Clutch category
+            ("clutch", "advanced"),
+            ("clutch", "base"),
+            ("clutch", "misc"),
+            ("clutch", "scoring"),
+            ("clutch", "usage"),
+            # Defense category
+            ("defense", "2_pointers"),
+            ("defense", "3_pointers"),
+            ("defense", "greater_than_15ft"),
+            ("defense", "less_than_10ft"),
+            ("defense", "less_than_6ft"),
+            ("defense", "overall"),
+            # Shooting category
+            ("shooting", "5ft_range"),
+            ("shooting", "by_zone"),
+        ]
+
+        return combinations
+
+    def get_season_types_for_category(self, category: str) -> List[str]:
+        """
+        Get the appropriate season types for a specific category.
+
+        Args:
+            category: Category name (general, clutch, defense, shooting)
+
+        Returns:
+            List of season types to process for this category
+        """
+        if category == "general":
+            return ["regular", "playoffs", "ist", "playin"]
+        elif category in ["clutch", "defense", "shooting"]:
+            return ["regular", "playoffs", "ist"]
+        else:
+            return ["regular", "playoffs", "ist"]
+
+    def fetch_and_upload_season_averages(
+        self,
+        bucket: str,
+        category: str,
+        type_param: str,
+        season_type: str,
+        season: int,
+        extraction_date: str,
+    ) -> bool:
+        """
+        Fetch season averages for a specific combination and upload to GCS.
+
+        Args:
+            bucket: GCS bucket name
+            category: Season averages category
+            type_param: Season averages type
+            season_type: Season type
+            season: Season year
+            extraction_date: Date of extraction
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            print(
+                f"Processing: category={category}, type={type_param}, season_type={season_type}, season={season}"
+            )
+
+            # Fetch season averages data from API
+            response = self.balldontlie.get_season_averages(
+                category, season_type, type_param, season
+            )
+
+            if response is None or len(response) == 0:
+                print(
+                    f"No data received for {category}/{type_param}/{season_type}/{season}"
+                )
+                return False
+
+            # Convert API response to dictionary format (if needed)
+            if response and hasattr(response[0], "model_dump"):
+                data = self.smartbetting.convert_object_to_dict(response)
+            else:
+                data = response  # Already in dictionary format
+
+            # Convert data to NDJSON format for BigQuery compatibility
+            ndjson_data = self.smartbetting.convert_to_ndjson(data)
+
+            # Generate storage path and blob name
+            storage_path = self._get_storage_path(
+                category, type_param, season_type, season, extraction_date
+            )
+            gcs_blob_name = f"{storage_path}/season_averages_{category}_{type_param}_{season_type}_{season}.json"
+
+            # Upload NDJSON data to Google Cloud Storage
+            self.smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
+
+            print(
+                f"✅ Successfully uploaded {len(data)} records for {category}/{type_param}/{season_type}/{season}"
+            )
+            return True
+
+        except Exception as e:
+            print(
+                f"❌ Error processing {category}/{type_param}/{season_type}/{season}: {str(e)}"
+            )
+            return False
+
+    def _get_storage_path(
+        self,
+        category: str,
+        type_param: str,
+        season_type: str,
+        season: int,
+        extraction_date: str,
+    ) -> str:
+        """
+        Generate the storage path for season averages data.
+
+        Args:
+            category: Season averages category (e.g., 'general', 'clutch', 'defense', 'shooting')
+            type_param: Season averages type (e.g., 'base', 'advanced', 'usage')
+            season_type: Season type (e.g., 'regular', 'playoffs', 'ist', 'playin')
+            season: Season year
+            extraction_date: Date of extraction (kept for compatibility but not used in path)
+
+        Returns:
+            Storage path string
+        """
+        from .utils import Catalog
+
+        return f"{Catalog.NBA}/season_averages/{category}/{type_param}/{season_type}/{season}"
+
+    def process_combinations(
+        self,
+        combinations: List[tuple],
+        bucket: str,
+        season: int,
+        extraction_date: str,
+        season_types: List[str] = None,
+    ) -> tuple[int, int]:
+        """
+        Process a list of combinations and return success/failure counts.
+
+        Args:
+            combinations: List of (category, type_param) tuples
+            bucket: GCS bucket name
+            season: Season year
+            extraction_date: Date of extraction
+            season_types: List of season types to process (default: ['regular', 'playoffs'])
+
+        Returns:
+            Tuple of (successful_count, failed_count)
+        """
+        if season_types is None:
+            season_types = ["regular", "playoffs"]
+
+        successful_extractions = 0
+        failed_extractions = 0
+
+        total_combinations = len(combinations) * len(season_types)
+        current_combination = 0
+
+        for category, type_param in combinations:
+            for season_type in season_types:
+                current_combination += 1
+                print(
+                    f"\n[{current_combination}/{total_combinations}] Processing combination..."
+                )
+
+                success = self.fetch_and_upload_season_averages(
+                    bucket=bucket,
+                    category=category,
+                    type_param=type_param,
+                    season_type=season_type,
+                    season=season,
+                    extraction_date=extraction_date,
+                )
+
+                if success:
+                    successful_extractions += 1
+                else:
+                    failed_extractions += 1
+
+                # Add delay between API calls to respect rate limits
+                if (
+                    current_combination < total_combinations
+                ):  # Don't sleep after the last call
+                    time.sleep(2)
+
+        return successful_extractions, failed_extractions
+
+    def process_category_combinations(
+        self,
+        category: str,
+        combinations: List[tuple],
+        bucket: str,
+        season: int,
+        extraction_date: str,
+    ) -> tuple[int, int]:
+        """
+        Process all combinations for a specific category.
+
+        Args:
+            category: Category name
+            combinations: List of (category, type) combinations for this category
+            bucket: GCS bucket name
+            season: Season year
+            extraction_date: Date of extraction
+
+        Returns:
+            Tuple of (successful_count, failed_count)
+        """
+        print(f"\n{'=' * 80}")
+        print(f"PROCESSING {category.upper()} CATEGORY")
+        print(f"{'=' * 80}")
+
+        # Filter combinations for this category
+        category_combinations = [
+            (cat, type_param) for cat, type_param in combinations if cat == category
+        ]
+
+        # Get season types for this category
+        season_types = self.get_season_types_for_category(category)
+
+        print(f"Category: {category}")
+        print(f"Types: {[type_param for _, type_param in category_combinations]}")
+        print(f"Season Types: {season_types}")
+        print(f"Total combinations: {len(category_combinations) * len(season_types)}")
+
+        return self.process_combinations(
+            combinations=category_combinations,
+            bucket=bucket,
+            season=season,
+            extraction_date=extraction_date,
+            season_types=season_types,
+        )

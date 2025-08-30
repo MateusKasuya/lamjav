@@ -117,13 +117,13 @@ def main():
         gcs_blob_name = f"{str(Catalog.INJURY_REPORT)}/{str(Schema.LANDING)}/{filename}"
 
         print("\n3. Uploading to GCS...")
-        print(f"Bucket: {Bucket.LAMJAV_STORAGE}")
+        print(f"Bucket: {Bucket.SMARTBETTING_STORAGE}")
         print(f"Blob path: {gcs_blob_name}")
 
         # Upload to GCS
         storage_client.upload_pdf_to_gcs(
             pdf_data=pdf_data,
-            bucket_name=Bucket.LAMJAV_STORAGE,
+            bucket_name=Bucket.SMARTBETTING_STORAGE,
             blob_name=gcs_blob_name,
         )
 
