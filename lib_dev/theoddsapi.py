@@ -7,9 +7,13 @@ This module provides a wrapper around The Odds API for sports betting data retri
 import requests
 from dotenv import load_dotenv
 import os
-from typing import List, Optional, Any, Dict, TypeVar
+import time
+from typing import List, Optional, Any, Dict, TypeVar, Callable
+from pathlib import Path
 
-load_dotenv()
+# Load .env from project root
+project_root = Path(__file__).parent.parent
+load_dotenv(project_root / ".env")
 
 T = TypeVar("T")
 
@@ -115,6 +119,49 @@ class TheOddsAPILib:
         else:
             print(f"Unexpected error during {operation}: {str(e)}")
 
+    def _handle_rate_limit_with_retry(
+        self,
+        operation: Callable,
+        max_retries: int = 5,
+        base_delay: int = 2,
+        extra_delay: int = 0,
+    ) -> Optional[T]:
+        """
+        Execute an operation with rate limit handling and retry logic.
+
+        Args:
+            operation: The operation to execute
+            max_retries: Maximum number of retry attempts
+            base_delay: Base delay for exponential backoff
+            extra_delay: Additional delay to add to backoff
+
+        Returns:
+            Result of the operation if successful, None if failed
+        """
+        retry_count = 0
+
+        while retry_count < max_retries:
+            try:
+                return operation()
+            except RateLimitError:
+                retry_count += 1
+                delay = base_delay**retry_count + extra_delay
+                print(
+                    f"Rate limit hit. Retrying in {delay} seconds... (Attempt {retry_count}/{max_retries})"
+                )
+                time.sleep(delay)
+
+                if retry_count >= max_retries:
+                    print("Max retries reached for rate limit. Failing.")
+                    raise RateLimitError(
+                        "Rate limit exceeded after maximum retries", 429, {}
+                    )
+            except Exception as e:
+                print(f"Unexpected error in rate limit handler: {str(e)}")
+                break
+
+        return None
+
     def _handle_http_response(
         self, response: requests.Response, operation: str
     ) -> Dict[str, Any]:
@@ -216,10 +263,19 @@ class TheOddsAPILib:
             if all_sports:
                 params["all"] = "true"
 
-            sports_data = self._make_request("/sports/", params, "get_sports")
+            def fetch_sports():
+                return self._make_request("/sports/", params, "get_sports")
 
-            print(f"Successfully fetched {len(sports_data)} sports")
-            return sports_data
+            sports_data = self._handle_rate_limit_with_retry(
+                operation=fetch_sports, max_retries=3, base_delay=2, extra_delay=1
+            )
+
+            if sports_data is not None:
+                print(f"Successfully fetched {len(sports_data)} sports")
+                return sports_data
+            else:
+                print("No sports data received")
+                return []
 
         except Exception as e:
             self._handle_api_exceptions(e, "get_sports")
@@ -263,6 +319,14 @@ class TheOddsAPILib:
         try:
             print(f"Getting odds for sport: {sport}")
 
+            # Calculate expected cost for logging
+            market_count = len(markets.split(",")) if markets else 1
+            region_count = len(regions.split(","))
+            expected_cost = market_count * region_count
+            print(
+                f"Expected API cost: {expected_cost} credits ({market_count} markets × {region_count} regions)"
+            )
+
             params = {
                 "regions": regions,
                 "dateFormat": date_format,
@@ -286,10 +350,19 @@ class TheOddsAPILib:
             if include_bet_limits:
                 params["includeBetLimits"] = "true"
 
-            odds_data = self._make_request(f"/sports/{sport}/odds/", params, "get_odds")
+            def fetch_odds():
+                return self._make_request(f"/sports/{sport}/odds/", params, "get_odds")
 
-            print(f"Successfully fetched {len(odds_data)} odds events")
-            return odds_data
+            odds_data = self._handle_rate_limit_with_retry(
+                operation=fetch_odds, max_retries=5, base_delay=2, extra_delay=3
+            )
+
+            if odds_data is not None:
+                print(f"Successfully fetched {len(odds_data)} odds events")
+                return odds_data
+            else:
+                print("No odds data received")
+                return []
 
         except Exception as e:
             self._handle_api_exceptions(e, "get_odds")

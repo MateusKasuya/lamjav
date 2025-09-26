@@ -55,6 +55,9 @@ models:
       # BI Dev intermediate models
       bi_dev:
         +schema: bi_dev
+
+      odds:
+        +schema: odds
     # Marts models configuration
     marts:
       +materialized: table

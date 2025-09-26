@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from lib_dev.theoddsapi import TheOddsAPILib
 from lib_dev.smartbetting import SmartbettingLib
-from lib_dev.utils import Bucket, Catalog, Schema, Table
+from lib_dev.utils import Bucket, Catalog, Table, Season
 
 
 def main() -> NoReturn:
@@ -38,14 +38,14 @@ def main() -> NoReturn:
         Exception: For any other unexpected errors during execution
     """
     # Initialize constants
-    bucket = Bucket.LAMJAV_STORAGE
+    bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.ODDS
-    schema = Schema.LANDING
     table = Table.HISTORICAL_EVENTS
+    season = Season.SEASON_2024
 
     # Set start date (same as games.py)
-    start_date = date(2024, 10, 22)
-    end_date = date.today()  # Today's date
+    start_date = date(2025, 4, 9)
+    end_date = date(2025, 4, 10)  # Today's date
 
     # Initialize API clients
     theoddsapi = TheOddsAPILib()
@@ -94,7 +94,7 @@ def main() -> NoReturn:
             ndjson_data = smartbetting.convert_to_ndjson(data)
 
             # Upload NDJSON data to Google Cloud Storage
-            gcs_blob_name = f"{catalog}/{schema}/{table}/{table}_{current_date.strftime('%Y-%m-%d')}.json"
+            gcs_blob_name = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
             smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
             # Extract metadata for logging

@@ -17,7 +17,7 @@ WITH player_injury_periods AS (
     FROM {{ ref('stg_game_player_stats') }} AS gps
     INNER JOIN {{ ref('stg_games') }} AS g
         ON gps.game_id = g.game_id
-    INNER JOIN {{ source('bi_dev', 'de_para_players') }} AS dpp
+    INNER JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
         ON gps.player_id = dpp.nba_player_id
     INNER JOIN {{ ref('stg_injury_report') }} AS ir
         ON dpp.nba_player_name = ir.player_name

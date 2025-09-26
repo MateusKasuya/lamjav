@@ -138,6 +138,26 @@ sources:
             description: "Season statistics (STRUCT with various statistical fields based on category/type)"
             data_type: struct
 
+      - name: raw_season_averages_general_base
+        description: "NBA season averages general base raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://smartbetting-landing/nba/season_averages/general/base/*/*/season_averages_general_base_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: player
+            description: "Player information (STRUCT with id, first_name, last_name, position, height, weight, jersey_number, college, country, draft_year, draft_round, draft_number)"
+            data_type: struct
+          - name: season
+            description: "Season year (e.g., 2024)"
+            data_type: integer
+          - name: season_type
+            description: "Season type (regular, playoffs, ist, playin)"
+            data_type: string
+          - name: stats
+            description: "Season statistics (STRUCT with base statistical fields like pts, reb, ast, fg_pct, etc.)"
+            data_type: struct
+
       - name: raw_games
         description: "NBA games raw data from Balldontlie API (NDJSON format)"
         external:

@@ -4,8 +4,9 @@ sources:
   - name: bi_dev
     description: "BI development dataset with processed data"
     tables:
-      - name: de_para_players
-        description: "Player de-para mapping between injury_report and nba datasets"
+
+      - name: de_para_nba_injury_players
+        description: "Player de-para mapping: injury_report → nba active players"
         columns:
           - name: injury_player_name
             description: "Player name from injury report"
@@ -17,10 +18,45 @@ sources:
             data_type: string
           - name: nba_player_id
             description: "Player ID from NBA active players"
-            data_type: integer
+            data_type: string
           - name: similarity_score
             description: "Fuzzy matching similarity score (0-100)"
-            data_type: integer
+            data_type: string
+            tests:
+              - not_null
+          - name: is_confident_match
+            description: "Boolean flag indicating if similarity score >= threshold (80%)"
+            data_type: boolean
+            tests:
+              - not_null
+          - name: extraction_timestamp
+            description: "Timestamp when the data was extracted and loaded to BigQuery"
+            data_type: timestamp
+            tests:
+              - not_null
+
+      - name: de_para_nba_odds_players
+        description: "Player de-para mapping: odds → nba active players"
+        columns:
+          - name: odds_player_name
+            description: "Player name from odds data (last_name, first_name format)"
+            data_type: string
+            tests:
+              - not_null
+          - name: nba_player_name
+            description: "Player name from NBA active players (last_name, first_name format)"
+            data_type: string
+          - name: nba_player_id
+            description: "Player ID from NBA active players"
+            data_type: string
+          - name: similarity_score
+            description: "Fuzzy matching similarity score (0-100)"
+            data_type: string
+            tests:
+              - not_null
+          - name: is_confident_match
+            description: "Boolean flag indicating if similarity score >= threshold (80%)"
+            data_type: boolean
             tests:
               - not_null
           - name: extraction_timestamp

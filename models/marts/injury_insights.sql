@@ -28,7 +28,7 @@ WITH team_leaders_first_two AS (
         coalesce(sl.assists_rank = 1 AND ir.current_status IS NOT null, false) AS leader_assists_out_injury,
         coalesce(sl.assists_rank > 1 AND ir.current_status IS null, false) AS second_leader_assists_available
     FROM {{ ref('int_stats_leaders') }} AS sl
-    LEFT JOIN {{ source('bi_dev', 'de_para_players') }} AS dpp
+    LEFT JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
         ON sl.player_id = dpp.nba_player_id
     LEFT JOIN {{ ref('stg_injury_report') }} AS ir
         ON dpp.injury_player_name = ir.player_name

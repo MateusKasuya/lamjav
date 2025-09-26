@@ -1,133 +1,76 @@
 """
-Player De-Para Pipeline using Fuzzy String Matching.
+Master Player De-Para Pipeline.
 
-This script orchestrates the process of matching players between active players
-and injury report using fuzzy string matching techniques.
+This script executes both NBA x Injury and NBA x Odds de-para pipelines
+by calling the individual scripts in sequence.
 """
 
 import sys
 import os
 from datetime import datetime
-from dotenv import load_dotenv
-
-# Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-from lib_dev.fuzzystringmatch import FuzzyStringMatch
-from lib_dev.smartbetting import SmartbettingLib
+import subprocess
 
 
 def main():
     """
-    Main function to execute the player de-para pipeline.
+    Main function to execute both de-para pipelines.
 
-    This function:
-    1. Fetches active players from BigQuery staging table
-    2. Fetches distinct injury report players from BigQuery staging table
-    3. Performs fuzzy string matching between the two datasets
-    4. Uploads results to BigQuery in bi_dev.de_para_players
+    This function runs:
+    1. NBA x Injury de-para pipeline
+    2. NBA x Odds de-para pipeline
 
     Returns:
         None
     """
-    print("=== PLAYER DE-PARA PIPELINE ===")
+    print("=== MASTER PLAYER DE-PARA PIPELINE ===")
     print(f"Started at: {datetime.now()}")
 
-    # Load environment variables
-    load_dotenv()
-    project_id = os.getenv("DBT_PROJECT")
-
-    if not project_id:
-        raise ValueError("DBT_PROJECT environment variable not set")
+    # Get current directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     try:
-        # Initialize components
-        print("\n1. Initializing components...")
-        fuzzy_matcher = FuzzyStringMatch(project_id)
-        smartbetting = SmartbettingLib()
+        # Run NBA x Injury pipeline
+        print("\n🔄 Running NBA x Injury de-para pipeline...")
+        print("=" * 50)
 
-        # Fetch data from BigQuery
-        print("\n2. Fetching data from BigQuery...")
-        active_players = fuzzy_matcher.get_active_players()
-        injury_players = fuzzy_matcher.get_injury_report_players()
-
-        print(f"   Active players: {len(active_players)}")
-        print(f"   Distinct injury players: {len(injury_players)}")
-
-        # Perform fuzzy string matching
-        print("\n3. Performing fuzzy string matching...")
-        matches_df = fuzzy_matcher.match_players(
-            active_players=active_players,
-            injury_players=injury_players,
-            threshold=80,  # Minimum similarity score
+        injury_script = os.path.join(current_dir, "de_para_nba_injury_players.py")
+        result_injury = subprocess.run(
+            [sys.executable, injury_script], capture_output=False, text=True
         )
 
-        # Generate matching report
-        print("\n4. Generating matching report...")
-        report = fuzzy_matcher.generate_matching_report(matches_df)
-
-        print("📊 MATCHING REPORT:")
-        print(f"   Total players: {report['total_players']}")
-        print(f"   Matched players: {report['matched_players']}")
-        print(f"   Unmatched players: {report['unmatched_players']}")
-        print(f"   Match rate: {report['match_rate']}%")
-        print(f"   High confidence (≥90): {report['high_confidence_matches']}")
-        print(f"   Medium confidence (80-89): {report['medium_confidence_matches']}")
-        print(f"   Low confidence (<80): {report['low_confidence_matches']}")
-
-        # Prepare data for upload with specified columns
-        print("\n5. Preparing data for upload...")
-        upload_df = matches_df[
-            [
-                "injury_player_name",
-                "active_player_name",
-                "active_player_id",
-                "similarity_score",
-            ]
-        ].copy()
-        upload_df.columns = [
-            "injury_player_name",
-            "nba_player_name",
-            "nba_player_id",
-            "similarity_score",
-        ]
-
-        # Show sample of results
-        print("\n6. Sample of matching results:")
-        print("=" * 90)
-        print(
-            f"{'Injury Player':<25} | {'NBA Player':<25} | {'NBA ID':<8} | {'Score':<5}"
-        )
-        print("=" * 90)
-
-        for _, row in upload_df.head(10).iterrows():
-            injury_name = row["injury_player_name"][:24]
-            nba_name = (
-                row["nba_player_name"][:24] if row["nba_player_name"] else "NO MATCH"
+        if result_injury.returncode != 0:
+            print(
+                f"❌ NBA x Injury pipeline failed with return code: {result_injury.returncode}"
             )
-            nba_id = row["nba_player_id"] if row["nba_player_id"] else "N/A"
-            score = row["similarity_score"]
-            print(f"{injury_name:<25} | {nba_name:<25} | {nba_id:<8} | {score:<5}")
+            return
 
-        # Upload to BigQuery
-        print("\n7. Uploading results to BigQuery...")
-        dataset_id = "bi_dev"
-        table_id = "de_para_players"
+        print("\n✅ NBA x Injury pipeline completed successfully!")
 
-        smartbetting.upload_to_bigquery(
-            data=upload_df,
-            project_id=project_id,
-            dataset_id=dataset_id,
-            table_id=table_id,
-            write_disposition="WRITE_TRUNCATE",  # Replace existing data
+        # Run NBA x Odds pipeline
+        print("\n🔄 Running NBA x Odds de-para pipeline...")
+        print("=" * 50)
+
+        odds_script = os.path.join(current_dir, "de_para_nba_odds_players.py")
+        result_odds = subprocess.run(
+            [sys.executable, odds_script], capture_output=False, text=True
         )
 
-        print("✅ Player de-para pipeline completed successfully!")
-        print(f"📊 BigQuery table: {project_id}.{dataset_id}.{table_id}")
+        if result_odds.returncode != 0:
+            print(
+                f"❌ NBA x Odds pipeline failed with return code: {result_odds.returncode}"
+            )
+            return
+
+        print("\n✅ NBA x Odds pipeline completed successfully!")
+
+        print("\n🎉 MASTER PIPELINE COMPLETED SUCCESSFULLY!")
+        print("📊 Both BigQuery tables have been updated:")
+        print("   - bi_dev.de_para_nba_injury_players")
+        print("   - bi_dev.de_para_nba_odds_players")
         print(f"Completed at: {datetime.now()}")
 
     except Exception as e:
-        print(f"❌ Error in player de-para pipeline: {str(e)}")
+        print(f"❌ Error in master de-para pipeline: {str(e)}")
         raise
 
 

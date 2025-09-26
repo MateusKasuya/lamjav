@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: odds
+    description: "Odds data from external tables in Google Cloud Storage"
+    schema: odds
+    tables:
+      - name: raw_historical_event_odds
+        description: "Historical event odds data from DraftKings and FanDuel (NDJSON format)"
+        columns:
+          - name: data
+            description: "Main event data containing all odds information"
+            data_type: json
+          - name: timestamp
+            description: "Snapshot timestamp when data was captured"
+            data_type: string
+          - name: previous_timestamp
+            description: "Previous snapshot timestamp"
+            data_type: string
+          - name: next_timestamp
+            description: "Next snapshot timestamp"
+            data_type: string

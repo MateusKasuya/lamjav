@@ -9,8 +9,8 @@ from google.cloud import storage
 from google.cloud import bigquery
 import json
 import pandas as pd
-from typing import Any, List, Union, Optional
-from datetime import datetime
+from typing import Any, List, Union, Optional, Dict
+from datetime import datetime, date
 
 
 class SmartbettingLib:
@@ -282,3 +282,160 @@ class SmartbettingLib:
             print(
                 f"\n⚠️  No successful extractions for {category_name}. Check API configuration and parameters."
             )
+
+    # ========================================================================================
+    # EVENT DATA EXTRACTION METHODS
+    # ========================================================================================
+
+    def list_historical_events_files(
+        self, bucket_name: str, catalog: str, table: str, season: str
+    ) -> List[str]:
+        """
+        List all historical events files in the GCS folder.
+
+        Args:
+            bucket_name: GCS bucket name
+            catalog: Data catalog (e.g., 'odds')
+            table: Table name (e.g., 'historical_events')
+            season: Season identifier (e.g., 'season_2024')
+
+        Returns:
+            List of file names (blob names) in the historical_events folder
+        """
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+
+            # List all blobs in the historical_events folder
+            prefix = f"{catalog}/{table}/{season}/"
+            blobs = bucket.list_blobs(prefix=prefix)
+
+            file_names = []
+            for blob in blobs:
+                if blob.name.endswith(".json"):
+                    file_names.append(blob.name)
+
+            print(f"Found {len(file_names)} historical events files")
+            return file_names
+
+        except Exception as e:
+            print(f"Error listing historical events files: {e}")
+            return []
+
+    def read_historical_events_file(
+        self, bucket_name: str, file_name: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Read a single historical events file from GCS.
+
+        Note: Files are stored in NDJSON format (one JSON object per line).
+
+        Args:
+            bucket_name: GCS bucket name
+            file_name: The GCS blob name to read
+
+        Returns:
+            List of event dictionaries from the file
+        """
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(file_name)
+
+            # Download content as text
+            content = blob.download_as_text()
+
+            # Parse NDJSON format (one JSON object per line)
+            events_data = []
+            for line in content.strip().split("\n"):
+                if line.strip():  # Skip empty lines
+                    try:
+                        event = json.loads(line)
+                        events_data.append(event)
+                    except json.JSONDecodeError as json_err:
+                        print(f"Error parsing JSON line in {file_name}: {json_err}")
+                        continue
+
+            print(f"Successfully read {len(events_data)} events from {file_name}")
+            return events_data
+
+        except Exception as e:
+            print(f"Error reading file {file_name}: {e}")
+            return []
+
+    def extract_event_ids_from_historical_data(
+        self,
+        bucket_name: str,
+        catalog: str = "odds",
+        table: str = "historical_events",
+        season: str = "season_2024",
+        start_date: date = None,
+        end_date: date = None,
+    ) -> Dict[str, str]:
+        """
+        Extract all event IDs and commence times from historical events files.
+
+        This method provides the SAME functionality as extract_event_ids.py
+        but integrated directly into SmartbettingLib for seamless usage.
+
+        Args:
+            bucket_name: GCS bucket name
+            catalog: Data catalog (default: 'odds')
+            table: Table name (default: 'historical_events')
+            season: Season identifier (default: 'season_2024')
+            start_date: Optional start date filter (inclusive)
+            end_date: Optional end date filter (inclusive)
+
+        Returns:
+            Dictionary mapping event ID to commence time
+        """
+        print("🚀 Extracting event IDs from historical data...")
+
+        # List all files
+        file_names = self.list_historical_events_files(
+            bucket_name, catalog, table, season
+        )
+        if not file_names:
+            print("No historical events files found")
+            return {}
+
+        # Filter files by date if specified
+        if start_date or end_date:
+            filtered_files = []
+            for file_name in file_names:
+                # Extract date from filename: raw_odds_historical_events_YYYY-MM-DD.json
+                try:
+                    # Split filename and get the date part
+                    date_str = file_name.split("_")[-1].replace(".json", "")
+                    file_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+                    if start_date and file_date < start_date:
+                        continue
+                    if end_date and file_date > end_date:
+                        continue
+
+                    filtered_files.append(file_name)
+                except ValueError:
+                    continue
+
+            file_names = filtered_files
+            print(f"Filtered to {len(file_names)} files based on date range")
+
+        # Extract event data from all files
+        event_data = {}
+        total_events = 0
+
+        for file_name in file_names:
+            events_data = self.read_historical_events_file(bucket_name, file_name)
+
+            for event in events_data:
+                event_id = event.get("id")
+                commence_time = event.get("commence_time")
+                if event_id and commence_time:
+                    event_data[event_id] = commence_time
+                    total_events += 1
+
+        print(
+            f"✅ Extracted {len(event_data)} unique event IDs from {total_events} total events"
+        )
+        return event_data

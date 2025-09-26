@@ -16,6 +16,8 @@ cleaned_data AS (
 
         -- Team information
         game.id AS game_id,
+        game.date AS game_date,
+        game.season AS game_season,
 
         -- Game information
         CAST(id AS INTEGER) AS stat_id,
@@ -50,6 +52,7 @@ cleaned_data AS (
 
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data
+    WHERE game.date < '2025-04-07'
 )
 
 SELECT * FROM cleaned_data
