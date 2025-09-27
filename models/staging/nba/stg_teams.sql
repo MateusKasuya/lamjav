@@ -10,9 +10,8 @@ WITH source_data AS (
 cleaned_data AS (
     SELECT
         id AS team_id,
-        TRIM(full_name) AS team_full_name,
+        TRIM(full_name) AS team_name,
         UPPER(TRIM(abbreviation)) AS team_abbreviation,
-        TRIM(conference) AS conference,
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data
 )

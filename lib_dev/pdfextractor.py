@@ -486,7 +486,7 @@ class PDFTableExtractor:
         df_copy = df.copy()
 
         # Preserva colunas de metadados (que começam com _)
-        metadata_columns = [col for col in df_copy.columns if str(col).startswith("_")]
+        [col for col in df_copy.columns if str(col).startswith("_")]
 
         # Converte para string e limpa os nomes
         new_columns = []
@@ -973,7 +973,7 @@ class PDFTableExtractor:
 
         if has_headers:
             # Usar a primeira linha como cabeçalho
-            headers = first_row.tolist()
+            first_row.tolist()
             df_clean = df.iloc[1:].reset_index(drop=True)
         else:
             # Sem cabeçalhos, usar a tabela como está

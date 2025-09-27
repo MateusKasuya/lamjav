@@ -34,6 +34,6 @@ sqlfluff-templater-dbt = "^3.4.2"
 
 
 [tool.taskipy.tasks]
-fix = "ruff format . && ruff check . --fix && sqlfluff format . && sqlfluff fix ."
+fix = "ruff format . && ruff check . --fix --unsafe-fixes && sqlfluff format . && sqlfluff fix ."
 run = "poetry run python"
 dbt = "dbt run --select"

@@ -8,7 +8,6 @@ techniques to handle variations in naming conventions.
 from thefuzz import fuzz
 from thefuzz import process
 import pandas as pd
-from typing import Dict
 from google.cloud import bigquery
 
 
@@ -39,13 +38,9 @@ class FuzzyStringMatch:
         """
         query = """
         SELECT 
-            player_id,
-            full_name,
-            last_name_first,
-            last_name_first_team,
-            team_id,
-            team_full_name,
-            team_abbreviation
+            id AS player_id,
+            name,
+            last_name_first_team
         FROM `{project_id}.nba.stg_active_players`
         """.format(project_id=self.project_id)
 
@@ -75,109 +70,29 @@ class FuzzyStringMatch:
             DataFrame with distinct odds players data
         """
         query = """
+        WITH ranked_odds AS (
+            SELECT
+                player_name,
+                player_name_home_team,
+                player_name_away_team,
+                snapshot_timestamp,
+                -- Rank by most recent snapshot to get current team context
+                ROW_NUMBER() OVER (
+                    PARTITION BY player_name 
+                    ORDER BY snapshot_timestamp DESC
+                ) as rn
+            FROM
+                `{project_id}.odds.stg_historical_event_odds`
+        )
         SELECT
             player_name,
-            ANY_VALUE(home_team_abbr) as home_team_abbr,
-            ANY_VALUE(away_team_abbr) as away_team_abbr
-        FROM
-            `{project_id}.odds.stg_historical_event_odds`
-        WHERE player_name IS NOT NULL
-        GROUP BY player_name
-        ORDER BY player_name
+            player_name_home_team,
+            player_name_away_team
+        FROM ranked_odds
+        WHERE rn = 1
         """.format(project_id=self.project_id)
 
         return self.client.query(query).to_dataframe()
-
-    def match_players(
-        self,
-        active_players: pd.DataFrame,
-        injury_players: pd.DataFrame,
-        odds_players: pd.DataFrame = None,
-        threshold: int = 80,
-    ) -> pd.DataFrame:
-        """
-        Match injury players against NBA active players using fuzzy string matching.
-        Optionally also finds corresponding odds players for reference.
-
-        Args:
-            active_players: DataFrame with NBA active players (PRIMARY comparison base)
-            injury_players: DataFrame with injury report players
-            odds_players: DataFrame with odds players (optional, for additional reference)
-            threshold: Minimum similarity score (0-100) for NBA active player match
-
-        Returns:
-            DataFrame with matched players and similarity scores
-        """
-        matches = []
-
-        # Get lists of names for matching
-        active_names = active_players["last_name_first"].tolist()
-        injury_names = injury_players["player_name"].tolist()
-        odds_names = (
-            odds_players["last_name_first"].tolist() if odds_players is not None else []
-        )
-
-        if odds_players is not None:
-            print(
-                f"Matching {len(injury_names)} injury players against {len(active_names)} NBA active players (primary) and finding corresponding names in {len(odds_names)} odds players..."
-            )
-        else:
-            print(
-                f"Matching {len(injury_names)} injury players against {len(active_names)} NBA active players..."
-            )
-
-        for idx, injury_player in injury_players.iterrows():
-            injury_name = injury_player["player_name"]
-
-            # PRIMARY MATCHING: Find best match against NBA active players
-            best_match_active = process.extractOne(
-                injury_name, active_names, scorer=fuzz.token_sort_ratio
-            )
-
-            # SECONDARY REFERENCE: Find corresponding name in odds players if available
-            best_match_odds = None
-            if odds_players is not None and len(odds_names) > 0:
-                best_match_odds = process.extractOne(
-                    injury_name, odds_names, scorer=fuzz.token_sort_ratio
-                )
-
-            # Initialize match record
-            match_record = {
-                "injury_player_name": injury_name,
-                "active_player_name": None,
-                "active_player_id": None,
-                "similarity_score": 0,
-                "odds_player_name": None,
-                "odds_similarity_score": 0,
-            }
-
-            # Process PRIMARY match against NBA active players
-            if best_match_active:
-                matched_name_active, similarity_score_active = best_match_active
-                match_record["similarity_score"] = similarity_score_active
-
-                if similarity_score_active >= threshold:
-                    # Find the corresponding NBA active player record
-                    active_player = active_players[
-                        active_players["last_name_first"] == matched_name_active
-                    ].iloc[0]
-                    match_record["active_player_name"] = matched_name_active
-                    match_record["active_player_id"] = active_player["player_id"]
-
-            # Process SECONDARY reference from odds players (informational only)
-            if best_match_odds:
-                matched_name_odds, similarity_score_odds = best_match_odds
-                match_record["odds_player_name"] = matched_name_odds
-                match_record["odds_similarity_score"] = similarity_score_odds
-
-            matches.append(match_record)
-
-        result_df = pd.DataFrame(matches)
-
-        # Sort by similarity score descending
-        result_df = result_df.sort_values("similarity_score", ascending=False)
-
-        return result_df
 
     def match_nba_injury_players(
         self,
@@ -199,7 +114,7 @@ class FuzzyStringMatch:
         matches = []
 
         # Get lists of names for matching
-        active_names = active_players["last_name_first"].tolist()
+        active_names = active_players["name"].tolist()
         injury_names = injury_players["player_name"].tolist()
 
         print(
@@ -232,7 +147,7 @@ class FuzzyStringMatch:
                 if matched_name_active:
                     # Find the corresponding NBA active player record
                     active_player = active_players[
-                        active_players["last_name_first"] == matched_name_active
+                        active_players["name"] == matched_name_active
                     ].iloc[0]
                     match_record["nba_player_name"] = matched_name_active
                     match_record["nba_player_id"] = active_player["player_id"]
@@ -275,16 +190,15 @@ class FuzzyStringMatch:
             "last_name_first_team"
         ].tolist()  # "James, LeBron (LAL)"
 
-        # Create player+team combinations for odds (try both home and away teams)
+        # Use the already concatenated player+team combinations from staging
         odds_names_with_teams = []
         for _, player in odds_players.iterrows():
-            player_name = player["player_name"]
-            home_team = player["home_team_abbr"]
-            away_team = player["away_team_abbr"]
+            home_team_combo = player["player_name_home_team"]
+            away_team_combo = player["player_name_away_team"]
 
-            # Add both possible team combinations
-            odds_names_with_teams.append(f"{player_name} ({home_team})")
-            odds_names_with_teams.append(f"{player_name} ({away_team})")
+            # Add both possible team combinations (already concatenated in staging)
+            odds_names_with_teams.append(home_team_combo)
+            odds_names_with_teams.append(away_team_combo)
 
         # Remove duplicates
         odds_names_with_teams = list(set(odds_names_with_teams))
@@ -295,12 +209,10 @@ class FuzzyStringMatch:
 
         for idx, odds_player in odds_players.iterrows():
             player_name = odds_player["player_name"]
-            home_team = odds_player["home_team_abbr"]
-            away_team = odds_player["away_team_abbr"]
 
-            # Try matching with both possible team combinations
-            home_combo = f"{player_name} ({home_team})"
-            away_combo = f"{player_name} ({away_team})"
+            # Use the already concatenated player+team combinations from staging
+            home_combo = odds_player["player_name_home_team"]
+            away_combo = odds_player["player_name_away_team"]
 
             # Find best match for home team combination
             match_home = process.extractOne(
@@ -316,19 +228,14 @@ class FuzzyStringMatch:
             if match_home and match_away:
                 if match_home[1] >= match_away[1]:
                     best_match_nba = match_home
-                    used_combo = home_combo
                 else:
                     best_match_nba = match_away
-                    used_combo = away_combo
             elif match_home:
                 best_match_nba = match_home
-                used_combo = home_combo
             elif match_away:
                 best_match_nba = match_away
-                used_combo = away_combo
             else:
                 best_match_nba = None
-                used_combo = home_combo  # fallback
 
             # Initialize match record
             match_record = {
@@ -352,7 +259,7 @@ class FuzzyStringMatch:
                         == matched_name_nba_with_team
                     ].iloc[0]
                     match_record["nba_player_name"] = active_player[
-                        "last_name_first"
+                        "name"
                     ]  # Store without team for consistency
                     match_record["nba_player_id"] = active_player["player_id"]
 
@@ -365,176 +272,37 @@ class FuzzyStringMatch:
 
         result_df = pd.DataFrame(matches)
 
-        # Sort by similarity score descending
+        # Remove duplicates based on odds_player_name, keeping the best match
+        result_df = result_df.sort_values("similarity_score", ascending=False)
+        result_df = result_df.drop_duplicates(subset=["odds_player_name"], keep="first")
+
+        # Sort by similarity score descending again after deduplication
         result_df = result_df.sort_values("similarity_score", ascending=False)
 
         return result_df
 
-    def generate_injury_matching_report(
-        self, matches_df: pd.DataFrame
-    ) -> Dict[str, int]:
+    def upload_to_bigquery(
+        self,
+        dataframe: pd.DataFrame,
+        table_id: str,
+        write_disposition: str = "WRITE_TRUNCATE",
+    ) -> None:
         """
-        Generate a summary report of the NBA x Injury matching results.
+        Upload DataFrame to BigQuery table.
 
         Args:
-            matches_df: DataFrame with NBA x Injury matching results
-
-        Returns:
-            Dictionary with summary statistics
+            dataframe: DataFrame to upload
+            table_id: BigQuery table ID in format 'dataset.table'
+            write_disposition: Write mode ('WRITE_TRUNCATE', 'WRITE_APPEND', 'WRITE_EMPTY')
         """
-        total_players = len(matches_df)
-        confident_matched_players = len(
-            matches_df[matches_df["is_confident_match"] == True]
+        job_config = bigquery.LoadJobConfig(write_disposition=write_disposition)
+
+        full_table_id = f"{self.project_id}.{table_id}"
+
+        job = self.client.load_table_from_dataframe(
+            dataframe, full_table_id, job_config=job_config
         )
-        all_matched_players = len(matches_df[matches_df["nba_player_name"].notna()])
-        unmatched_players = len(matches_df[matches_df["nba_player_name"].isna()])
 
-        # Score distribution
-        high_confidence = len(matches_df[matches_df["similarity_score"] >= 90])
-        medium_confidence = len(
-            matches_df[
-                (matches_df["similarity_score"] >= 80)
-                & (matches_df["similarity_score"] < 90)
-            ]
-        )
-        low_confidence = len(matches_df[matches_df["similarity_score"] < 80])
+        job.result()  # Wait for the job to complete
 
-        report = {
-            "total_players": total_players,
-            "confident_matched_players": confident_matched_players,
-            "all_matched_players": all_matched_players,
-            "unmatched_players": unmatched_players,
-            "confident_match_rate": round(
-                (confident_matched_players / total_players) * 100, 2
-            ),
-            "all_match_rate": round((all_matched_players / total_players) * 100, 2),
-            "high_confidence_matches": high_confidence,
-            "medium_confidence_matches": medium_confidence,
-            "low_confidence_matches": low_confidence,
-        }
-
-        return report
-
-    def generate_odds_matching_report(self, matches_df: pd.DataFrame) -> Dict[str, int]:
-        """
-        Generate a summary report of the Odds x NBA matching results.
-
-        Args:
-            matches_df: DataFrame with Odds x NBA matching results
-
-        Returns:
-            Dictionary with summary statistics
-        """
-        total_players = len(matches_df)
-        confident_matched_players = len(
-            matches_df[matches_df["is_confident_match"] == True]
-        )
-        all_matched_players = len(matches_df[matches_df["nba_player_name"].notna()])
-        unmatched_players = len(matches_df[matches_df["nba_player_name"].isna()])
-
-        # Score distribution
-        high_confidence = len(matches_df[matches_df["similarity_score"] >= 90])
-        medium_confidence = len(
-            matches_df[
-                (matches_df["similarity_score"] >= 80)
-                & (matches_df["similarity_score"] < 90)
-            ]
-        )
-        low_confidence = len(matches_df[matches_df["similarity_score"] < 80])
-
-        report = {
-            "total_players": total_players,
-            "confident_matched_players": confident_matched_players,
-            "all_matched_players": all_matched_players,
-            "unmatched_players": unmatched_players,
-            "confident_match_rate": round(
-                (confident_matched_players / total_players) * 100, 2
-            ),
-            "all_match_rate": round((all_matched_players / total_players) * 100, 2),
-            "high_confidence_matches": high_confidence,
-            "medium_confidence_matches": medium_confidence,
-            "low_confidence_matches": low_confidence,
-        }
-
-        return report
-
-    def generate_matching_report(self, matches_df: pd.DataFrame) -> Dict[str, int]:
-        """
-        Generate a summary report of the matching results (legacy method).
-        Automatically detects the type based on column names.
-
-        Args:
-            matches_df: DataFrame with matching results
-
-        Returns:
-            Dictionary with summary statistics
-        """
-        if "injury_player_name" in matches_df.columns:
-            return self.generate_injury_matching_report(matches_df)
-        elif "odds_player_name" in matches_df.columns:
-            return self.generate_odds_matching_report(matches_df)
-        else:
-            # Fallback for old format
-            total_players = len(matches_df)
-            matched_players = len(matches_df[matches_df["active_player_name"].notna()])
-            unmatched_players = total_players - matched_players
-
-            # Score distribution
-            high_confidence = len(matches_df[matches_df["similarity_score"] >= 90])
-            medium_confidence = len(
-                matches_df[
-                    (matches_df["similarity_score"] >= 80)
-                    & (matches_df["similarity_score"] < 90)
-                ]
-            )
-            low_confidence = len(matches_df[matches_df["similarity_score"] < 80])
-
-            report = {
-                "total_players": total_players,
-                "matched_players": matched_players,
-                "unmatched_players": unmatched_players,
-                "match_rate": round((matched_players / total_players) * 100, 2),
-                "high_confidence_matches": high_confidence,
-                "medium_confidence_matches": medium_confidence,
-                "low_confidence_matches": low_confidence,
-            }
-
-            return report
-
-    def save_to_csv(self, matches_df: pd.DataFrame, file_path: str) -> None:
-        """
-        Save matching results to CSV file for validation.
-
-        Args:
-            matches_df: DataFrame with matching results
-            file_path: Path to save the CSV file
-        """
-        matches_df.to_csv(file_path, index=False)
-        print(f"✅ Matching results saved to: {file_path}")
-
-    def get_unmatched_players(self, matches_df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Get players that couldn't be matched.
-
-        Args:
-            matches_df: DataFrame with matching results
-
-        Returns:
-            DataFrame with unmatched players
-        """
-        return matches_df[matches_df["active_player_name"].isna()]
-
-    def get_low_confidence_matches(
-        self, matches_df: pd.DataFrame, threshold: int = 85
-    ) -> pd.DataFrame:
-        """
-        Get matches with low confidence scores for manual review.
-
-        Args:
-            matches_df: DataFrame with matching results
-            threshold: Minimum confidence threshold
-
-        Returns:
-            DataFrame with low confidence matches
-        """
-        return matches_df[matches_df["similarity_score"] < threshold]
+        print(f"✅ Uploaded {len(dataframe)} rows to {full_table_id}")

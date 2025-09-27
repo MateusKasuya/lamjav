@@ -12,10 +12,6 @@ cleaned_data AS (
         -- Player information
         player.id AS player_id,
 
-        -- Season information
-        season,
-        TRIM(season_type) AS season_type,
-
         -- Basic statistics
         CAST(stats.gp AS INTEGER) AS games_played,
         CAST(stats.min AS FLOAT64) AS minutes,
@@ -35,18 +31,14 @@ cleaned_data AS (
         --CAST(stats.fgm AS FLOAT64) AS field_goals_made,
         --CAST(stats.fga AS FLOAT64) AS field_goals_attempted,
         CAST(stats.fg3m AS FLOAT64) AS three_pointers_made,
-        CAST(stats.fg3a AS FLOAT64) AS three_pointers_attempted,
+        --CAST(stats.fg3a AS FLOAT64) AS three_pointers_attempted,
         --CAST(stats.ftm AS FLOAT64) AS free_throws_made,
         --CAST(stats.fta AS FLOAT64) AS free_throws_attempted,
 
         CAST(stats.dd2 AS INTEGER) AS double_doubles,
         CAST(stats.td3 AS INTEGER) AS triple_doubles,
 
-        -- Team record stats
-        CAST(stats.w AS INTEGER) AS wins,
-        CAST(stats.l AS INTEGER) AS losses,
-        CAST(stats.w_pct AS FLOAT64) AS win_percentage,
-        CAST(stats.age AS INTEGER) AS player_age,
+        CAST(stats.age AS INTEGER) AS age,
 
         -- Metadata
         CURRENT_TIMESTAMP() AS loaded_at

@@ -11,24 +11,18 @@ final AS (
     SELECT
         -- Event information
         data.id AS event_id,
-        cast(data.commence_time AS timestamp) AS commence_time,
-        data.home_team,
-        data.away_team,
 
         -- Timestamp information
         cast(timestamp AS timestamp) AS snapshot_timestamp,
-
-        -- Bookmaker information
-        bookmaker.key AS bookmaker_key,
-
         -- Market information
         market.key AS market_key,
 
         -- Outcome information
-        outcome.name AS outcome_name,
         outcome.description AS player_name,
-        cast(outcome.point AS float64) AS point,
-        cast(outcome.price AS float64) AS price,
+        CASE
+            WHEN market.key = 'player_double_double' OR market.key = 'player_triple_double' THEN 1
+            ELSE cast(outcome.point AS float64)
+        END AS line,
 
         -- Team abbreviation mapping (convert full team names to abbreviations)
         CASE
@@ -106,6 +100,16 @@ final AS (
         unnest(data.bookmakers) AS bookmaker,
         unnest(bookmaker.markets) AS market,
         unnest(market.outcomes) AS outcome
+    WHERE outcome.name = 'Over' OR outcome.name = 'Yes'
 )
 
-SELECT * FROM final
+SELECT
+    event_id,
+    snapshot_timestamp,
+    market_key,
+    line,
+    extraction_timestamp,
+    trim(player_name) AS player_name,
+    trim(player_name || ' (' || home_team_abbr || ')') AS player_name_home_team,
+    trim(player_name || ' (' || away_team_abbr || ')') AS player_name_away_team
+FROM final
