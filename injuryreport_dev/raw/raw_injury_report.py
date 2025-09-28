@@ -2,12 +2,33 @@
 Raw Injury Report data pipeline script.
 
 Este script processa arquivos PDF de injury reports do Google Cloud Storage em batches:
-- Filtra especificamente o arquivo injury_report_2025-04-07_06PM.pdf
-- Processa 50 PDFs por vez
+- Filtra por data específica ou processa todos os PDFs disponíveis
+- Processa PDFs em batches configuráveis
 - Consolida dados do batch completo
 - Insere tudo no BigQuery de uma vez
 - Limpa memória completamente
 - Continua para o próximo batch
+
+CONFIGURAÇÃO:
+    Modifique as variáveis no final do arquivo (linha 415+):
+
+    TARGET_DATES = ["2025-04-07", "2025-04-08"]  # Lista de datas ou [] para todas
+    BATCH_SIZE = 50                               # Quantos PDFs processar por vez
+    START_FROM = 0                                # Índice inicial
+    PROCESS_ALL_BATCHES = False                   # True para processar todos automaticamente
+
+EXEMPLOS DE USO:
+    # Processar PDFs de múltiplas datas
+    TARGET_DATES = ["2025-04-07", "2025-04-08", "2025-04-09"]
+
+    # Processar todos os PDFs disponíveis
+    TARGET_DATES = []
+
+    # Processar com batch menor
+    BATCH_SIZE = 10
+
+    # Processar todos os batches automaticamente
+    PROCESS_ALL_BATCHES = True
 """
 
 import sys
@@ -30,17 +51,19 @@ from lib_dev.utils import Bucket, Catalog, Schema, Table
 PROCESSED_FILES = {}
 
 
-def list_pdf_files_in_gcs(bucket_name: str, prefix: str = "") -> List[str]:
+def list_pdf_files_in_gcs(
+    bucket_name: str, prefix: str = "", target_dates: List[str] = None
+) -> List[str]:
     """
-    Lista arquivos PDF no Google Cloud Storage, filtrando os já processados.
-    Agora filtra especificamente o arquivo injury_report_2025-04-07_06PM.pdf.
+    Lista arquivos PDF no Google Cloud Storage, filtrando por datas específicas.
 
     Args:
         bucket_name: Nome do bucket do GCS
         prefix: Prefixo para filtrar arquivos (opcional)
+        target_dates: Lista de datas no formato YYYY-MM-DD para filtrar arquivos (opcional)
 
     Returns:
-        Lista de nomes dos arquivos PDF não processados (especificamente 2025-04-07_06PM)
+        Lista de nomes dos arquivos PDF filtrados por datas
     """
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -48,17 +71,25 @@ def list_pdf_files_in_gcs(bucket_name: str, prefix: str = "") -> List[str]:
     blobs = bucket.list_blobs(prefix=prefix)
     all_pdf_files = [blob.name for blob in blobs if blob.name.lower().endswith(".pdf")]
 
-    # Filtrar apenas o arquivo específico: injury_report_2025-04-07_06PM.pdf
-    target_filename = "2025-04-07_06PM"
-    date_filtered_files = [f for f in all_pdf_files if target_filename in f]
+    if target_dates:
+        # Filtrar por múltiplas datas
+        date_filtered_files = []
+        for target_date in target_dates:
+            files_for_date = [f for f in all_pdf_files if target_date in f]
+            date_filtered_files.extend(files_for_date)
+            print(f"🎯 PDFs da data {target_date}: {len(files_for_date)}")
+
+        print(f"📁 Total PDFs no bucket: {len(all_pdf_files)}")
+        print(f"🎯 Total PDFs das datas {target_dates}: {len(date_filtered_files)}")
+    else:
+        # Se não especificou datas, pegar todos os PDFs
+        date_filtered_files = all_pdf_files
+        print(f"📁 Total PDFs no bucket: {len(all_pdf_files)}")
+        print("🎯 Processando todos os PDFs disponíveis")
 
     # Filtrar apenas arquivos não processados
     pdf_files = [f for f in date_filtered_files if f not in PROCESSED_FILES]
 
-    print(f"📁 Total PDFs no bucket: {len(all_pdf_files)}")
-    print(
-        f"🎯 PDFs do arquivo específico {target_filename}: {len(date_filtered_files)}"
-    )
     print(f"🆕 PDFs novos para processar: {len(pdf_files)}")
     return pdf_files
 
@@ -87,13 +118,15 @@ def download_pdf_from_gcs(bucket_name: str, blob_name: str, local_path: str) -> 
         return False
 
 
-def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
+def main(
+    batch_size: int = 50, start_from: int = 0, target_dates: List[str] = None
+) -> NoReturn:
     """
     Pipeline principal para processar PDFs do GCS em batches e inserir no BigQuery.
-    Agora filtra especificamente o arquivo injury_report_2025-04-07_06PM.pdf.
+    Filtra arquivos por datas específicas se fornecidas.
 
     Este processo:
-    1. Lista arquivos PDF no Google Cloud Storage (especificamente 2025-04-07_06PM)
+    1. Lista arquivos PDF no Google Cloud Storage (filtrados por datas se especificadas)
     2. Para cada batch de PDFs:
        - Baixa e extrai dados de cada PDF
        - Acumula dados do batch completo
@@ -104,6 +137,7 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
     Args:
         batch_size: Número de PDFs a processar por batch (padrão: 50)
         start_from: Índice para continuar processamento (padrão: 0)
+        target_dates: Lista de datas no formato YYYY-MM-DD para filtrar arquivos (opcional)
 
     Raises:
         ValueError: Se as variáveis de ambiente não estiverem configuradas
@@ -125,7 +159,10 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
         raise ValueError("Variável de ambiente DBT_PROJECT não está configurada")
 
     print(f"🚀 Pipeline Injury Report | Bucket: {bucket_name}")
-    print("🎯 Filtrando especificamente: injury_report_2025-04-07_06PM.pdf")
+    if target_dates:
+        print(f"🎯 Filtrando por datas: {target_dates}")
+    else:
+        print("🎯 Processando todos os PDFs disponíveis")
     print(f"⚙️ Processamento: Batch Size={batch_size}, Start From={start_from}")
     print(
         f"🎯 Fluxo: Extrair {batch_size} PDFs → BigQuery → Limpar Memória → Próximo Batch"
@@ -133,7 +170,7 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
 
     try:
         # 1. Listar arquivos PDF no GCS
-        all_pdf_files = list_pdf_files_in_gcs(bucket_name, pdf_prefix)
+        all_pdf_files = list_pdf_files_in_gcs(bucket_name, pdf_prefix, target_dates)
 
         if not all_pdf_files:
             print("✅ Nenhum arquivo novo para processar")
@@ -190,6 +227,15 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
                         print(" ⚠️ 0 linhas extraídas")
                     else:
                         df = extractor.sanitize_column_names(df)
+
+                        # Verificar se coluna current_status está presente
+                        if "current_status" in df.columns:
+                            status_found = df["current_status"].value_counts()
+                            print(
+                                f" 🔍 Status detectados: {len(status_found)} tipos diferentes"
+                            )
+                        else:
+                            print(" ⚠️ Coluna 'current_status' não encontrada!")
 
                         # Adicionar metadados do arquivo fonte
                         df["source_file"] = pdf_file
@@ -332,17 +378,21 @@ def main(batch_size: int = 50, start_from: int = 0) -> NoReturn:
         raise
 
 
-def process_all_batches(batch_size: int = 50):
+def process_all_batches(batch_size: int = 50, target_dates: List[str] = None):
     """
-    Processa especificamente o arquivo injury_report_2025-04-07_06PM.pdf.
+    Processa PDFs em batches, filtrando por datas se especificadas.
     Cada batch é inserido no BigQuery e memória é limpa antes do próximo.
 
     Args:
         batch_size: Tamanho de cada batch (padrão: 50)
+        target_dates: Lista de datas no formato YYYY-MM-DD para filtrar arquivos (opcional)
     """
     import time
 
-    print("🔄 Iniciando processamento do arquivo injury_report_2025-04-07_06PM.pdf")
+    if target_dates:
+        print(f"🔄 Iniciando processamento de PDFs das datas: {target_dates}")
+    else:
+        print("🔄 Iniciando processamento de todos os PDFs disponíveis")
     start_from = 0
     batch_num = 1
 
@@ -353,7 +403,9 @@ def process_all_batches(batch_size: int = 50):
 
         try:
             # Executa o batch
-            main(batch_size=batch_size, start_from=start_from)
+            main(
+                batch_size=batch_size, start_from=start_from, target_dates=target_dates
+            )
 
             # Pausa entre batches para não sobrecarregar o sistema
             print("\n⏱️ Pausa de 30 segundos entre batches...")
@@ -369,8 +421,52 @@ def process_all_batches(batch_size: int = 50):
 
 
 if __name__ == "__main__":
-    # Executa apenas um batch por padrão
-    main()
+    # ========================================
+    # CONFIGURAÇÕES - MODIFIQUE AQUI
+    # ========================================
 
-    # Para processar todos automaticamente, descomente a linha abaixo:
-    # process_all_batches()
+    # Datas específicas para processar (formato: YYYY-MM-DD)
+    # Se None ou lista vazia, processa todos os PDFs disponíveis
+    TARGET_DATES = [
+        "2025-04-11",
+        "2025-04-12",
+        "2025-04-13",
+        "2025-04-14",
+        "2025-04-15",
+        "2025-04-16",
+        "2025-04-17",
+        "2025-04-18",
+        "2025-04-19",
+        "2025-04-20",
+    ]  # Altere para as datas desejadas ou [] para todas
+
+    # Tamanho do batch (quantos PDFs processar por vez)
+    BATCH_SIZE = 50
+
+    # Índice inicial (para continuar processamento)
+    START_FROM = 0
+
+    # Se True, processa todos os batches automaticamente
+    # Se False, processa apenas um batch
+    PROCESS_ALL_BATCHES = False
+
+    # ========================================
+    # EXECUÇÃO
+    # ========================================
+
+    print("🚀 Configurações:")
+    if TARGET_DATES:
+        print(f"   📅 Datas: {TARGET_DATES}")
+    else:
+        print("   📅 Datas: Todas as datas")
+    print(f"   📦 Batch Size: {BATCH_SIZE}")
+    print(f"   📍 Start From: {START_FROM}")
+    print(f"   🔄 Process All Batches: {PROCESS_ALL_BATCHES}")
+    print()
+
+    if PROCESS_ALL_BATCHES:
+        # Processar todos os batches automaticamente
+        process_all_batches(batch_size=BATCH_SIZE, target_dates=TARGET_DATES)
+    else:
+        # Executa apenas um batch por padrão
+        main(batch_size=BATCH_SIZE, start_from=START_FROM, target_dates=TARGET_DATES)

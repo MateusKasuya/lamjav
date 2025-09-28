@@ -176,11 +176,21 @@ class SmartbettingLib:
         # Table reference
         table_ref = f"{project_id}.{dataset_id}.{table_id}"
 
-        # Configure job
+        # Se for WRITE_APPEND e temos source_file, deletar dados antigos da mesma data
+        if write_disposition == "WRITE_APPEND" and "source_file" in df.columns:
+            self._delete_old_data_by_date(client, project_id, dataset_id, table_id, df)
+
+        # Configure job with explicit schema
         job_config = bigquery.LoadJobConfig(
             write_disposition=write_disposition,
-            autodetect=True,  # Auto-detect schema
             create_disposition="CREATE_IF_NEEDED",
+            schema=[
+                bigquery.SchemaField("player_name", "STRING"),
+                bigquery.SchemaField("current_status", "STRING"),
+                bigquery.SchemaField("source_file", "STRING"),
+                bigquery.SchemaField("row_order", "INTEGER"),
+                bigquery.SchemaField("extraction_timestamp", "STRING"),
+            ],
         )
 
         try:
@@ -192,6 +202,52 @@ class SmartbettingLib:
 
         except Exception:
             raise
+
+    def _delete_old_data_by_date(
+        self, client, project_id: str, dataset_id: str, table_id: str, df: pd.DataFrame
+    ) -> None:
+        """
+        Deleta dados antigos da mesma data antes de inserir novos dados.
+
+        Args:
+            client: BigQuery client
+            project_id: GCP project ID
+            dataset_id: BigQuery dataset name
+            table_id: BigQuery table name
+            df: DataFrame com os novos dados
+        """
+        try:
+            # Extrair datas únicas dos arquivos processados
+            unique_dates = set()
+            for source_file in df["source_file"].unique():
+                # Extrair data do nome do arquivo (formato: injury_report_YYYY-MM-DD_06PM.pdf)
+                if "injury_report_" in source_file and "_06PM.pdf" in source_file:
+                    try:
+                        date_part = source_file.split("injury_report_")[1].split(
+                            "_06PM.pdf"
+                        )[0]
+                        unique_dates.add(date_part)
+                    except:
+                        continue
+
+            # Deletar dados antigos das mesmas datas
+            if unique_dates:
+                print(f"🗑️ Deletando dados antigos das datas: {list(unique_dates)}")
+                for date in unique_dates:
+                    delete_query = f"""
+                    DELETE FROM `{project_id}.{dataset_id}.{table_id}`
+                    WHERE source_file LIKE '%injury_report_{date}_06PM.pdf%'
+                    """
+                    try:
+                        query_job = client.query(delete_query)
+                        query_job.result()  # Aguardar conclusão
+                        print(f"✅ Dados antigos da data {date} deletados")
+                    except Exception as e:
+                        print(
+                            f"⚠️ Aviso: Erro ao deletar dados antigos da data {date}: {e}"
+                        )
+        except Exception as e:
+            print(f"⚠️ Aviso: Erro na limpeza de dados antigos: {e}")
 
     def upload_to_gcs(
         self,

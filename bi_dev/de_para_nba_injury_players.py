@@ -44,7 +44,7 @@ def main():
         # Initialize components
         print("\n1. Initializing components...")
         fuzzy_matcher = FuzzyStringMatch(project_id)
-        smartbetting = SmartbettingLib()
+        SmartbettingLib()
 
         # Fetch data from BigQuery
         print("\n2. Fetching data from BigQuery...")
@@ -103,19 +103,16 @@ def main():
 
         # Upload to BigQuery - NBA x Injury table
         print("\n6. Uploading NBA x Injury results to BigQuery...")
-        dataset_id = "bi_dev"
-        injury_table_id = "de_para_nba_injury_players"
+        injury_table_id = "bi_dev.de_para_nba_injury_players"
 
-        smartbetting.upload_to_bigquery(
-            data=nba_injury_matches,
-            project_id=project_id,
-            dataset_id=dataset_id,
+        fuzzy_matcher.upload_to_bigquery(
+            dataframe=nba_injury_matches,
             table_id=injury_table_id,
             write_disposition="WRITE_TRUNCATE",  # Replace existing data
         )
 
         print("✅ NBA x Injury de-para pipeline completed successfully!")
-        print(f"📊 BigQuery table created: {project_id}.{dataset_id}.{injury_table_id}")
+        print(f"📊 BigQuery table created: {project_id}.{injury_table_id}")
         print(f"   Total records: {len(nba_injury_matches)}")
         print(f"   Confident matches: {injury_report['confident_matched_players']}")
         print(f"   Success rate: {injury_report['confident_match_rate']}%")

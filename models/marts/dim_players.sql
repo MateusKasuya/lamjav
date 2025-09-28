@@ -33,6 +33,15 @@ game_player_stats AS (
         ) AS last_game_text
     FROM
         last_games
+),
+
+injury_report AS (
+    SELECT
+        player_name,
+        current_status
+    FROM
+        {{ ref('stg_injury_report') }}
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name ORDER BY injury_report_date DESC) = 1
 )
 
 SELECT
@@ -46,6 +55,7 @@ SELECT
     s.games_played,
     s.minutes,
     g.last_game_text,
+    ir.current_status,
     CURRENT_TIMESTAMP() AS loaded_at
 FROM
     {{ ref('stg_active_players') }} AS p
@@ -54,3 +64,7 @@ LEFT JOIN
     ON
         p.id = s.player_id
 LEFT JOIN game_player_stats AS g ON p.id = g.player_id
+LEFT JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS de_para
+    ON p.id = de_para.nba_player_id
+LEFT JOIN injury_report AS ir
+    ON de_para.injury_player_name = ir.player_name

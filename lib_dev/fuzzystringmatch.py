@@ -281,6 +281,72 @@ class FuzzyStringMatch:
 
         return result_df
 
+    def generate_matching_report(self, matches_df: pd.DataFrame) -> dict:
+        """
+        Generate a comprehensive matching report from the matches DataFrame.
+
+        Args:
+            matches_df: DataFrame with matching results
+
+        Returns:
+            Dictionary with matching statistics
+        """
+        if matches_df.empty:
+            return {
+                "total_players": 0,
+                "confident_matched_players": 0,
+                "confident_match_rate": 0.0,
+                "all_matched_players": 0,
+                "all_match_rate": 0.0,
+                "unmatched_players": 0,
+                "high_confidence_matches": 0,
+                "medium_confidence_matches": 0,
+                "low_confidence_matches": 0,
+            }
+
+        total_players = len(matches_df)
+
+        # Confident matches (≥80% similarity)
+        confident_matches = matches_df[matches_df["is_confident_match"]]
+        confident_matched_players = len(confident_matches)
+        confident_match_rate = (
+            (confident_matched_players / total_players) * 100
+            if total_players > 0
+            else 0
+        )
+
+        # All matches (any similarity score > 0)
+        all_matches = matches_df[matches_df["similarity_score"] > 0]
+        all_matched_players = len(all_matches)
+        all_match_rate = (
+            (all_matched_players / total_players) * 100 if total_players > 0 else 0
+        )
+
+        # Unmatched players
+        unmatched_players = total_players - all_matched_players
+
+        # Confidence level breakdown
+        high_confidence_matches = len(matches_df[matches_df["similarity_score"] >= 90])
+        medium_confidence_matches = len(
+            matches_df[
+                (matches_df["similarity_score"] >= 80)
+                & (matches_df["similarity_score"] < 90)
+            ]
+        )
+        low_confidence_matches = len(matches_df[matches_df["similarity_score"] < 80])
+
+        return {
+            "total_players": total_players,
+            "confident_matched_players": confident_matched_players,
+            "confident_match_rate": round(confident_match_rate, 2),
+            "all_matched_players": all_matched_players,
+            "all_match_rate": round(all_match_rate, 2),
+            "unmatched_players": unmatched_players,
+            "high_confidence_matches": high_confidence_matches,
+            "medium_confidence_matches": medium_confidence_matches,
+            "low_confidence_matches": low_confidence_matches,
+        }
+
     def upload_to_bigquery(
         self,
         dataframe: pd.DataFrame,

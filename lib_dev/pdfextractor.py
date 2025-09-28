@@ -946,7 +946,7 @@ class PDFTableExtractor:
 
     def _extract_players_from_table(self, df: pd.DataFrame, page_num: int) -> list:
         """
-        Extrai jogadores de uma tabela específica focando apenas em player_name e current_status.
+        Extrai jogadores de uma tabela específica incluindo player_name e current_status.
 
         Args:
             df: DataFrame da tabela
@@ -1032,7 +1032,7 @@ class PDFTableExtractor:
                             if current_status:
                                 break
 
-                # Criar dados do jogador (apenas as 4 colunas essenciais)
+                # Criar dados do jogador (player_name e current_status)
                 player_data = {
                     "player_name": player_name,
                     "current_status": current_status,
