@@ -120,4 +120,5 @@ stats_unpivoted AS (
     FROM base_data
 )
 
-SELECT * FROM stats_unpivoted
+SELECT *
+FROM stats_unpivoted

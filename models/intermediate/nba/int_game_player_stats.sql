@@ -8,6 +8,7 @@ WITH base_data AS (
     WHERE
         minutes > 0
         AND game_number <= 30
+        AND game_date < '2025-04-07'
 ),
 
 -- Unpivot the specified stats into long format

@@ -7,10 +7,10 @@ CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.nba.raw_season_avera
 OPTIONS (
     format = 'NEWLINE_DELIMITED_JSON',
     uris = [
-        'gs://smartbetting-landing/nba/season_averages/general/advanced/regular/2024/season_averages_general_advanced_regular_2024.json',
-        'gs://smartbetting-landing/nba/season_averages/general/advanced/playoffs/2024/season_averages_general_advanced_playoffs_2024.json',
-        'gs://smartbetting-landing/nba/season_averages/general/advanced/ist/2024/season_averages_general_advanced_ist_2024.json',
-        'gs://smartbetting-landing/nba/season_averages/general/advanced/playin/2024/season_averages_general_advanced_playin_2024.json'
+        'gs://smartbetting-landing/nba/season_averages/general/advanced/regular/2024/raw_nba_season_averages_general_advanced_regular_2024.json',
+        --'gs://smartbetting-landing/nba/season_averages/general/advanced/playoffs/2024/season_averages_general_advanced_playoffs_2024.json',
+        --'gs://smartbetting-landing/nba/season_averages/general/advanced/ist/2024/season_averages_general_advanced_ist_2024.json',
+        --'gs://smartbetting-landing/nba/season_averages/general/advanced/playin/2024/season_averages_general_advanced_playin_2024.json'
     ]
 );
 

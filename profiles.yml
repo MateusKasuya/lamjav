@@ -9,6 +9,6 @@ lamjav_dbt:
       method: service-account
       priority: interactive
       project: "{{ env_var('DBT_PROJECT') }}"
-      threads: 2
+      threads: 4
       type: bigquery
   target: dev

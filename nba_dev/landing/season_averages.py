@@ -45,41 +45,15 @@ def main() -> NoReturn:
     balldontlie = BalldontlieLib()
     smartbetting = SmartbettingLib()
 
-    # Define all combinations
+    # Define all combinations - only general/advanced for now
     combinations = [
-        # General category
-        ("general", "base"),
         ("general", "advanced"),
-        ("general", "usage"),
-        ("general", "scoring"),
-        ("general", "defense"),
-        ("general", "misc"),
-        # Clutch category
-        ("clutch", "advanced"),
-        ("clutch", "base"),
-        ("clutch", "misc"),
-        ("clutch", "scoring"),
-        ("clutch", "usage"),
-        # Defense category
-        ("defense", "2_pointers"),
-        ("defense", "3_pointers"),
-        ("defense", "greater_than_15ft"),
-        ("defense", "less_than_10ft"),
-        ("defense", "less_than_6ft"),
-        ("defense", "overall"),
-        # Shooting category
-        ("shooting", "5ft_range"),
-        ("shooting", "by_zone"),
     ]
 
     # Define season types for each category
     def get_season_types_for_category(category: str) -> list:
-        if category == "general":
-            return ["regular", "playoffs", "ist", "playin"]
-        elif category in ["clutch", "defense", "shooting"]:
-            return ["regular", "playoffs", "ist"]
-        else:
-            return ["regular", "playoffs", "ist"]
+        # Only extract regular season data for now
+        return ["regular"]
 
     try:
         total_successful = 0

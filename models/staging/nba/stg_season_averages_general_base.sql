@@ -39,7 +39,6 @@ cleaned_data AS (
         CAST(stats.td3 AS INTEGER) AS triple_doubles,
 
         CAST(stats.age AS INTEGER) AS age,
-
         -- Metadata
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data

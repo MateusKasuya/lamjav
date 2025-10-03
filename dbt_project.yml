@@ -43,33 +43,20 @@ models:
       # Odds staging models
       odds:
         +schema: odds
-      # BI Dev staging models
-      bi_dev:
-        +schema: bi_dev
     # Intermediate models configuration
     intermediate:
       +materialized: view
       # NBA intermediate models
       nba:
         +schema: nba
-      # BI Dev intermediate models
-      bi_dev:
-        +schema: bi_dev
 
       odds:
         +schema: odds
     # Marts models configuration
     marts:
       +materialized: table
-      # NBA marts models
-      nba:
-        +schema: nba
       # BI marts models
       bi:
         +schema: bi
 
-# Seeds configuration
-seeds:
-  lamjav_dbt:
-    +schema: nba
 

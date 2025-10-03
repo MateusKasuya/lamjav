@@ -63,16 +63,25 @@ class SmartbettingLib:
         Convert a list of objects to a list of dictionaries.
 
         Args:
-            objects: List of objects that have a model_dump() method
+            objects: List of objects that have a model_dump() method or are already dicts
 
         Returns:
             List of dictionaries converted from the objects
 
         Raises:
-            AttributeError: If objects don't have model_dump() method
+            AttributeError: If objects don't have model_dump() method and aren't dicts
         """
         print("Converting object to dict...")
-        return [data.model_dump() for data in objects]
+        result = []
+        for data in objects:
+            if isinstance(data, dict):
+                result.append(data)
+            elif hasattr(data, "model_dump"):
+                result.append(data.model_dump())
+            else:
+                # Try to convert to dict if it's a simple object
+                result.append(dict(data))
+        return result
 
     def upload_json_to_gcs(
         self, json_data: str, bucket_name: Union[str, Any], blob_name: Union[str, Any]

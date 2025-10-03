@@ -13,6 +13,10 @@ cleaned_data AS (
         team.id AS team_id,
         game.id AS game_id,
         game.date AS game_date,
+        game.home_team_score,
+        game.home_team_id,
+        game.visitor_team_score,
+        game.visitor_team_id,
         CAST(pts AS INTEGER) AS points,
         CAST(min AS INTEGER) AS minutes,
         CAST(fg3m AS INTEGER) AS threes,
@@ -46,10 +50,25 @@ cleaned_data AS (
             ) >= 2 THEN 1
             ELSE 0
         END AS double_double,
-        ROW_NUMBER() OVER (PARTITION BY player.id ORDER BY game.date DESC) AS game_number,
-        CURRENT_TIMESTAMP() AS loaded_at
+        CASE
+            WHEN game.home_team_score > game.visitor_team_score THEN game.home_team_id
+            WHEN game.visitor_team_score > game.home_team_score THEN game.visitor_team_id
+        END AS winner_team_id,
+        ROW_NUMBER() OVER (PARTITION BY player.id ORDER BY game.id DESC) AS game_number
     FROM source_data
-    WHERE game.date < '2025-04-07'
+    --WHERE game.date < '2025-04-07'
 )
 
-SELECT * FROM cleaned_data
+SELECT
+    *,
+    CASE
+        WHEN game_number <= 5 THEN 'L5'
+        WHEN game_number <= 10 THEN 'L10'
+        WHEN game_number <= 30 THEN 'L30'
+    END AS game_number_group,
+    CASE
+        WHEN winner_team_id = team_id THEN 'V'
+        WHEN winner_team_id != team_id THEN 'D'
+    END AS win_loss,
+    CURRENT_TIMESTAMP() AS loaded_at
+FROM cleaned_data
