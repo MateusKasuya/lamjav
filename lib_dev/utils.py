@@ -92,6 +92,9 @@ class Table(Enum):
     HISTORICAL_EVENTS = "historical_events"
     HISTORICAL_EVENT_ID = "historical_event_id"
     HISTORICAL_EVENT_ODDS = "historical_event_odds"
+    EVENTS = "events"
+    EVENT_ID = "event_id"
+    EVENT_ODDS = "event_odds"
     INJURY_REPORT = "injury_report"
     TEAM_STANDINGS = "team_standings"
 

@@ -1,7 +1,5 @@
 {{
   config(
-    materialized='table',
-    schema='bi',
     description='NBA players for analysis',
     labels={'domain': 'bi', 'category': 'analytics'}
   )

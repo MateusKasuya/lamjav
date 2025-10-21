@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Staging table for NBA injury report data from raw table'
 ) }}
 

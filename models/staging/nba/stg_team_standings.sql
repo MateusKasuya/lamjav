@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Staging table for NBA team standings from NDJSON external table'
 ) }}
 

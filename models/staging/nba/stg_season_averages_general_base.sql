@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Staging table for NBA season averages (general/base) from NDJSON external table'
 ) }}
 

@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Intermediate model that unpivots season averages stats - maintains base structure with unpivoted stat columns'
 ) }}
 

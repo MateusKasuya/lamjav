@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  dbt-staging:
+    build:
+      context: .
+      dockerfile: Dockerfile.staging
+    container_name: lamjav_dbt_staging
+    environment:
+      # Set these environment variables in your .env file or pass them directly
+      - DBT_PROJECT=${DBT_PROJECT}
+      - DBT_DATASET=${DBT_DATASET}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+    volumes:
+      # Mount Google Cloud credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials.json:ro
+
+  dbt-exclude-staging:
+    build:
+      context: .
+      dockerfile: Dockerfile.exclude-staging
+    container_name: lamjav_dbt_exclude_staging
+    environment:
+      # Set these environment variables in your .env file or pass them directly
+      - DBT_PROJECT=${DBT_PROJECT}
+      - DBT_DATASET=${DBT_DATASET}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+    volumes:
+      # Mount Google Cloud credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials.json:ro
+
+  # Original dbt service for backward compatibility
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lamjav_dbt
+    environment:
+      # Set these environment variables in your .env file or pass them directly
+      - DBT_PROJECT=${DBT_PROJECT}
+      - DBT_DATASET=${DBT_DATASET}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+    volumes:
+      # Mount Google Cloud credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials.json:ro
+    # Override default command if needed
+    # command: dbt run --select my_model+
+

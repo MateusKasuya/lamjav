@@ -1,7 +1,5 @@
 {{
   config(
-    materialized='table',
-    schema='bi',
     description='NBA prop player stats vs line per game',
     labels={'domain': 'bi', 'category': 'analytics'}
   )

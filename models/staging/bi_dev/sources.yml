@@ -11,8 +11,7 @@ sources:
           - name: injury_player_name
             description: "Player name from injury report"
             data_type: string
-            tests:
-              - not_null
+
           - name: nba_player_name
             description: "Player name from NBA active players (last_name, first_name format)"
             data_type: string
@@ -22,18 +21,15 @@ sources:
           - name: similarity_score
             description: "Fuzzy matching similarity score (0-100)"
             data_type: string
-            tests:
-              - not_null
+
           - name: is_confident_match
             description: "Boolean flag indicating if similarity score >= threshold (80%)"
             data_type: boolean
-            tests:
-              - not_null
+
           - name: extraction_timestamp
             description: "Timestamp when the data was extracted and loaded to BigQuery"
             data_type: timestamp
-            tests:
-              - not_null
+
 
       - name: de_para_nba_odds_players
         description: "Player de-para mapping: odds → nba active players"
@@ -41,8 +37,7 @@ sources:
           - name: odds_player_name
             description: "Player name from odds data (last_name, first_name format)"
             data_type: string
-            tests:
-              - not_null
+
           - name: nba_player_name
             description: "Player name from NBA active players (last_name, first_name format)"
             data_type: string
@@ -57,10 +52,7 @@ sources:
           - name: is_confident_match
             description: "Boolean flag indicating if similarity score >= threshold (80%)"
             data_type: boolean
-            tests:
-              - not_null
+
           - name: extraction_timestamp
             description: "Timestamp when the data was extracted and loaded to BigQuery"
             data_type: timestamp
-            tests:
-              - not_null

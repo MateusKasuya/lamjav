@@ -2,7 +2,7 @@
 NBA Team Standings data pipeline script.
 
 This script fetches NBA team standings data from the Balldontlie API for
-the 2024 season and uploads to Google Cloud Storage.
+the configured season and uploads to Google Cloud Storage.
 """
 
 import sys
@@ -22,7 +22,7 @@ def main() -> NoReturn:
     Main function to fetch NBA team standings data and upload to GCS.
 
     This function:
-    1. Fetches team standings for 2024 season
+    1. Fetches team standings for the configured season
     2. Uploads the data to Google Cloud Storage
 
     Returns:
@@ -38,7 +38,7 @@ def main() -> NoReturn:
     table = Table.TEAM_STANDINGS
 
     # Season parameter
-    season = Season.SEASON_2024
+    season = Season.SEASON_2025
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -46,12 +46,28 @@ def main() -> NoReturn:
 
     try:
         # Fetch team standings data from API
-        response = balldontlie.get_team_standings(season)
+        # Fetch team standings with structured status for diagnostics
+        result = balldontlie.get_team_standings_with_status(season)
+        status = result.get("status")
+        error = result.get("error")
+        details = result.get("details")
+        response = result.get("data")
 
+        # Distinguish between true empty and API error conditions
         if response is None or len(response) == 0:
-            raise Exception(
-                "Failed to fetch team standings data from API or no data received"
-            )
+            if status and status >= 500:
+                print(
+                    f"API returned server error ({status}) for season {season}. Details: {details}"
+                )
+            elif status and status >= 400:
+                print(
+                    f"API returned client error ({status}) for season {season}. Details: {details}"
+                )
+            else:
+                print(f"No team standings found for season {season}.")
+
+            print("Skipping upload.")
+            return
 
         # Convert API response to dictionary format
         data = smartbetting.convert_object_to_dict(response)

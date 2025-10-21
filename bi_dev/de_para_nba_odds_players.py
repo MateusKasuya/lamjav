@@ -78,19 +78,16 @@ def main():
 
         # Upload to BigQuery - Odds x NBA table
         print("\n6. Uploading Odds x NBA results to BigQuery...")
-        dataset_id = "bi_dev"
-        odds_table_id = "de_para_nba_odds_players"
+        odds_table_id = "bi_dev.de_para_nba_odds_players"
 
-        smartbetting.upload_to_bigquery(
-            data=nba_odds_matches,
-            project_id=project_id,
-            dataset_id=dataset_id,
+        fuzzy_matcher.upload_to_bigquery(
+            dataframe=nba_odds_matches,
             table_id=odds_table_id,
             write_disposition="WRITE_TRUNCATE",  # Replace existing data
         )
 
         print("✅ NBA x Odds de-para pipeline completed successfully!")
-        print(f"📊 BigQuery table created: {project_id}.{dataset_id}.{odds_table_id}")
+        print(f"📊 BigQuery table created: {project_id}.{odds_table_id}")
         print(f"   Total records: {len(nba_odds_matches)}")
         print(f"Completed at: {datetime.now()}")
 

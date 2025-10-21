@@ -1,0 +1,31 @@
+# Cloud Functions framework
+functions-framework==3.*
+
+# Requirements for de_para scripts
+# Scripts: de_para_nba_odds_players.py, de_para_nba_injury_players.py
+#
+# These scripts match player names between different data sources using
+# fuzzy string matching and upload results to BigQuery.
+
+# Environment variables management
+python-dotenv>=1.0.0
+
+# Data manipulation
+pandas>=2.0.0
+
+# Fuzzy string matching
+thefuzz>=0.20.0
+python-Levenshtein>=0.21.0  # Optional but recommended for better performance
+
+# Google Cloud dependencies
+google-cloud-bigquery>=3.10.0
+google-cloud-storage>=2.10.0
+
+# BigQuery data types support
+db-dtypes>=1.1.0
+
+# Additional dependencies for Google Cloud authentication
+google-auth>=2.20.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.0
+

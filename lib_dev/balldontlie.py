@@ -21,9 +21,9 @@ from datetime import date, timedelta
 import requests
 from pathlib import Path
 
-# Load .env from project root
-project_root = Path(__file__).parent.parent
-load_dotenv(project_root / ".env")
+# Load .env from current directory (Cloud Run)
+load_dotenv()
+
 
 T = TypeVar("T")
 
@@ -496,6 +496,36 @@ class BalldontlieLib:
         except Exception as e:
             self._handle_api_exceptions(e, "team standings retrieval")
             return None
+
+    def get_team_standings_with_status(self, season: int) -> Dict[str, Any]:
+        """
+        Retrieve NBA team standings for a specific season with structured status info.
+
+        Returns a dictionary with keys: 'data' (list|None), 'status' (int|None), 'error' (str|None),
+        and 'details' (dict|None) to help diagnose errors like 5xx from the API.
+
+        Args:
+            season: Season year (e.g., 2024)
+
+        Returns:
+            Dict containing data and error/status metadata
+        """
+        try:
+            print(f"Getting team standings for season (detailed): {season}...")
+            response = self.api.nba.standings.get(season=season)
+            data = response.data if response and hasattr(response, "data") else None
+            return {"data": data, "status": 200, "error": None, "details": None}
+        except (AuthenticationError, ValidationError, NotFoundError, RateLimitError, ServerError, BallDontLieException) as e:  # type: ignore[misc]
+            status = getattr(e, "status_code", None)
+            details = getattr(e, "response_data", None)
+            message = str(e)
+            print(
+                f"Detailed error during team standings retrieval: status={status}, message={message}, details={details}"
+            )
+            return {"data": None, "status": status, "error": message, "details": details}
+        except Exception as e:
+            print(f"Unexpected error during team standings retrieval (detailed): {str(e)}")
+            return {"data": None, "status": None, "error": str(e), "details": None}
 
     def get_games(self, game_date: date) -> Optional[List[Any]]:
         """

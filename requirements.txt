@@ -1,0 +1,21 @@
+# Google Cloud dependencies
+google-cloud-storage==2.10.0
+google-cloud-bigquery==3.13.0
+google-cloud-secret-manager==2.16.4
+
+# API and HTTP dependencies
+requests==2.31.0
+balldontlie==0.1.6
+
+# Data processing dependencies
+pandas==2.1.4
+python-dateutil==2.8.2
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Cloud Functions framework
+functions-framework==3.4.0
+
+# Type hints (built-in, but good to specify for compatibility)
+typing-extensions==4.8.0

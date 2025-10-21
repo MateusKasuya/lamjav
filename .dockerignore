@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# dbt
+target/
+dbt_packages/
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Development
+*_dev/
+bi_dev/
+nba_dev/
+odds_dev/
+injuryreport_dev/
+lib_dev/
+
+# Documentation
+docs/
+README.md
+
+# Other
+poetry.lock
+pyproject.toml
+requirements.txt
+requirements_odds.txt
+

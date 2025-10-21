@@ -1,0 +1,3 @@
+# dbt BigQuery adapter and dependencies
+dbt-bigquery
+

@@ -39,7 +39,7 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.SEASON_AVERAGES
-    season = Season.SEASON_2024
+    season = Season.SEASON_2025
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -47,7 +47,7 @@ def main() -> NoReturn:
 
     # Define all combinations - only general/advanced for now
     combinations = [
-        ("general", "advanced"),
+        ("general", "base"),
     ]
 
     # Define season types for each category

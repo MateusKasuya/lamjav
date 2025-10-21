@@ -1,7 +1,5 @@
 {{
   config(
-    materialized='table',
-    schema='bi',
     description='NBA players stats vs line performance',
     labels={'domain': 'bi', 'category': 'analytics'}
   )

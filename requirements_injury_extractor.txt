@@ -1,0 +1,29 @@
+# Google Cloud Functions requirements for NBA Injury Report Extractor
+# This file contains all dependencies needed to run injury_report_extractor.py in Cloud Functions
+
+# Google Cloud dependencies
+google-cloud-storage==2.10.0
+google-cloud-bigquery==3.13.0
+
+# HTTP and API dependencies
+requests==2.31.0
+
+# Data processing dependencies
+pandas==2.1.4
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Cloud Functions framework
+functions-framework==3.4.0
+
+# Type hints and utilities
+typing-extensions==4.8.0
+
+# Standard library dependencies (included in Python 3.12+)
+# - sys, os (built-in)
+# - datetime (built-in)
+# - pathlib (built-in)
+# - json (built-in)
+# - re (built-in)
+# - enum (built-in)

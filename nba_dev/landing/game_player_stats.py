@@ -41,10 +41,10 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.GAME_PLAYER_STATS
-    season = Season.SEASON_2024
+    season = Season.SEASON_2025
 
     # Set start date for daily extraction
-    start_date = date(2024, 10, 22)
+    start_date = date.today()
     end_date = date.today()  # Today's date
 
     # Initialize API clients
@@ -92,7 +92,7 @@ def main() -> NoReturn:
             ndjson_data = smartbetting.convert_to_ndjson(data)
 
             # Upload NDJSON data to Google Cloud Storage (by date)
-            gcs_blob_name = f"{catalog}/{table}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
+            gcs_blob_name = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
             smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
             print(
@@ -111,75 +111,10 @@ def main() -> NoReturn:
             f"\n📊 Daily extraction completed! Total player stats by date: {total_stats_by_date}"
         )
 
-        # PART 2: Extract player stats by season
-        print("\n" + "=" * 60)
-        print("EXTRACTING PLAYER STATS BY SEASON")
-        print("=" * 60)
-
-        print(f"Fetching all player stats for season {season}...")
-
-        # Fetch player stats data from API for the specific season
-        # Note: Using get_stats with date range for season
-        season_start = date(season, 10, 1)  # October 1st of the season
-        season_end = date(season + 1, 6, 30)  # June 30th of next year
-
-        print(f"Season range: {season_start} to {season_end}")
-
-        # For season extraction, we'll collect all daily stats
-        all_season_stats = []
-        current_season_date = season_start
-
-        while current_season_date <= season_end:
-            if current_season_date <= date.today():  # Only process dates up to today
-                print(f"Processing season stats for date: {current_season_date}")
-
-                response = balldontlie.get_stats(current_season_date)
-
-                if response and len(response) > 0:
-                    # Convert API response to dictionary format
-                    data = smartbetting.convert_object_to_dict(response)
-                    all_season_stats.extend(data)
-                    print(f"  Added {len(data)} stats for {current_season_date}")
-
-                # Add delay between API calls
-                time.sleep(2)
-
-            current_season_date += timedelta(days=1)
-
-        # Upload season data to Google Cloud Storage
-        if all_season_stats:
-            # Convert data to NDJSON format for BigQuery compatibility
-            ndjson_data = smartbetting.convert_to_ndjson(all_season_stats)
-
-            # Upload NDJSON data to Google Cloud Storage (by season)
-            gcs_blob_name = (
-                f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{season}.json"
-            )
-            smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
-
-            print(
-                f"✅ Successfully processed and uploaded {len(all_season_stats)} player stats for season {season}"
-            )
-        else:
-            # Create empty file to indicate the pipeline ran
-            ndjson_data = smartbetting.convert_to_ndjson([])
-            gcs_blob_name = (
-                f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{season}.json"
-            )
-            smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
-
-            print(
-                f"✅ Successfully uploaded empty player stats file for season {season}"
-            )
-
         # Print overall summary
         print("\n" + "=" * 80)
         print("OVERALL PLAYER STATS EXTRACTION SUMMARY:")
         print(f"📅 Stats by date: {total_stats_by_date}")
-        print(f"🏀 Stats by season: {len(all_season_stats)}")
-        print(
-            f"📊 Total stats processed: {total_stats_by_date + len(all_season_stats)}"
-        )
         print(f"🎯 Season: {season}")
         print(f"📅 Date range: {start_date} to {end_date}")
 

@@ -22,12 +22,8 @@ def main() -> NoReturn:
     """
     Main function to execute the NBA games data pipeline.
 
-    This function:
-    1. Fetches games data from Balldontlie API for each day starting from 22/10/2024
-    2. Fetches games data for the entire 2024 season
-    3. Uses datetime-preserving methods to ensure all fields are captured
-    4. Converts the data to the required format
-    5. Uploads the data to Google Cloud Storage in the landing layer
+    This function fetches games data by date using a datetime-preserving
+    method and uploads it to Google Cloud Storage in the landing layer.
 
     Returns:
         None
@@ -40,11 +36,11 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.GAMES
-    season = Season.SEASON_2024
+    season = Season.SEASON_2025
 
     # Set start date for daily extraction
-    start_date = date(2024, 10, 22)  # 22/10/2024
-    end_date = date.today()  # Today's date
+    start_date = date.today()  # 22/10/2024
+    end_date = date(2025,10,30)  # Today's date
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
@@ -101,7 +97,7 @@ def main() -> NoReturn:
             ndjson_data = smartbetting.convert_to_ndjson(data)
 
             # Upload NDJSON data to Google Cloud Storage (by date)
-            gcs_blob_name = f"{catalog}/{table}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
+            gcs_blob_name = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
             smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
             print(
@@ -116,51 +112,10 @@ def main() -> NoReturn:
             f"\n📊 Daily extraction completed! Total games by date: {total_games_by_date}"
         )
 
-        # PART 2: Extract games by season
-        print("\n" + "=" * 60)
-        print("EXTRACTING GAMES BY SEASON")
-        print("=" * 60)
-
-        print(f"Fetching all games for season {season}...")
-
-        # Fetch games data from API for the specific season
-        response = balldontlie.get_games_by_season(season)
-
-        if response is None:
-            print(f"Failed to fetch games data for season {season}")
-        elif len(response) == 0:
-            print(f"No games found for season {season}")
-            # Create empty file to indicate the pipeline ran
-            ndjson_data = smartbetting.convert_to_ndjson([])
-        else:
-            # Convert API response to dictionary format
-            data = smartbetting.convert_object_to_dict(response)
-            # Convert data to NDJSON format for BigQuery compatibility
-            ndjson_data = smartbetting.convert_to_ndjson(data)
-
-        # Upload NDJSON data to Google Cloud Storage (by season)
-        gcs_blob_name = (
-            f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{season}.json"
-        )
-        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
-
-        if response is None:
-            print(f"❌ Failed to fetch games for season {season}")
-        elif len(response) == 0:
-            print(f"✅ Successfully uploaded empty games file for season {season}")
-        else:
-            print(
-                f"✅ Successfully processed and uploaded {len(response)} games for season {season}"
-            )
-
         # Print overall summary
         print("\n" + "=" * 80)
         print("OVERALL GAMES EXTRACTION SUMMARY:")
         print(f"📅 Games by date: {total_games_by_date}")
-        print(f"🏀 Games by season: {len(response) if response else 0}")
-        print(
-            f"📊 Total games processed: {total_games_by_date + (len(response) if response else 0)}"
-        )
         print(f"🎯 Season: {season}")
         print(f"📅 Date range: {start_date} to {end_date}")
 

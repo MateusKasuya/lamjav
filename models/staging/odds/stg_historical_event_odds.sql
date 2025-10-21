@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Staging table for historical event odds - basic flattening and cleaning only'
 ) }}
 

@@ -50,13 +50,9 @@ models:
       nba:
         +schema: nba
 
-      odds:
-        +schema: odds
     # Marts models configuration
     marts:
       +materialized: table
-      # BI marts models
-      bi:
-        +schema: bi
+      +schema: bi
 
 

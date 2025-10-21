@@ -111,7 +111,7 @@ class SmartbettingLib:
 
     def upload_pdf_to_gcs(
         self, pdf_data: bytes, bucket_name: Union[str, Any], blob_name: Union[str, Any]
-    ) -> None:
+    ) -> bool:
         """
         Upload PDF data to Google Cloud Storage bucket.
 
@@ -121,19 +121,24 @@ class SmartbettingLib:
             blob_name: GCS blob name/path (can be enum or string)
 
         Returns:
-            None
+            bool: True if successful, False otherwise
 
         Raises:
             google.cloud.exceptions.GoogleCloudError: If there's an issue with GCP credentials
             google.cloud.exceptions.NotFound: If the bucket doesn't exist
         """
-        print("Uploading PDF to Google Cloud Storage...")
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(str(bucket_name))
-        blob = bucket.blob(str(blob_name))
+        try:
+            print("Uploading PDF to Google Cloud Storage...")
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(str(bucket_name))
+            blob = bucket.blob(str(blob_name))
 
-        blob.upload_from_string(pdf_data, content_type="application/pdf")
-        print(f"PDF uploaded to Google Cloud Storage!!! Size: {len(pdf_data)} bytes")
+            blob.upload_from_string(pdf_data, content_type="application/pdf")
+            print(f"PDF uploaded to Google Cloud Storage!!! Size: {len(pdf_data)} bytes")
+            return True
+        except Exception as e:
+            print(f"❌ Erro no upload para GCS: {str(e)}")
+            return False
 
     def upload_to_bigquery(
         self,
@@ -504,3 +509,413 @@ class SmartbettingLib:
             f"✅ Extracted {len(event_data)} unique event IDs from {total_events} total events"
         )
         return event_data
+
+    # ========================================================================================
+    # CURRENT EVENTS DATA HELPERS (non-historical)
+    # ========================================================================================
+
+    def build_events_gcs_path(
+        self,
+        catalog: str,
+        table: str,
+        season: str,
+        file_date: date,
+    ) -> str:
+        """
+        Build a standard GCS path for events data files.
+
+        Example path: odds/events/season_2024/raw_odds_events_YYYY-MM-DD.json
+        """
+        file_name = f"raw_{catalog}_{table}_{file_date.strftime('%Y-%m-%d')}.json"
+        return f"{catalog}/{table}/{season}/{file_name}"
+
+    def list_events_files(
+        self, bucket_name: str, catalog: str, table: str, season: str
+    ) -> List[str]:
+        """
+        List all current events files in the GCS folder.
+        """
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            prefix = f"{catalog}/{table}/{season}/"
+            blobs = bucket.list_blobs(prefix=prefix)
+            file_names: List[str] = []
+            for blob in blobs:
+                if blob.name.endswith(".json"):
+                    file_names.append(blob.name)
+            return file_names
+        except Exception as e:
+            print(f"Error listing events files: {e}")
+            return []
+
+    def read_events_file(self, bucket_name: str, file_name: str) -> List[Dict[str, Any]]:
+        """
+        Read a single events file (NDJSON) from GCS and parse it.
+        """
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(file_name)
+            content = blob.download_as_text()
+            events_data: List[Dict[str, Any]] = []
+            for line in content.strip().split("\n"):
+                if line.strip():
+                    try:
+                        events_data.append(json.loads(line))
+                    except json.JSONDecodeError as json_err:
+                        print(f"Error parsing JSON line in {file_name}: {json_err}")
+                        continue
+            return events_data
+        except Exception as e:
+            print(f"Error reading events file {file_name}: {e}")
+            return []
+
+    def extract_event_ids_from_events_data(
+        self,
+        bucket_name: str,
+        catalog: str = "odds",
+        table: str = "events",
+        season: str = "season_2024",
+        start_date: date = None,
+        end_date: date = None,
+    ) -> Dict[str, str]:
+        """
+        Extract event IDs and commence times from current events files in GCS.
+        """
+        print("🚀 Extracting event IDs from current events data...")
+        file_names = self.list_events_files(bucket_name, catalog, table, season)
+        if not file_names:
+            print("No events files found")
+            return {}
+
+        # Filter files by date if specified
+        if start_date or end_date:
+            filtered_files: List[str] = []
+            for file_name in file_names:
+                try:
+                    date_str = file_name.split("_")[-1].replace(".json", "")
+                    file_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    if start_date and file_date < start_date:
+                        continue
+                    if end_date and file_date > end_date:
+                        continue
+                    filtered_files.append(file_name)
+                except ValueError:
+                    continue
+            file_names = filtered_files
+
+        event_data: Dict[str, str] = {}
+        total_events = 0
+        for file_name in file_names:
+            events = self.read_events_file(bucket_name, file_name)
+            for event in events:
+                event_id = event.get("id")
+                commence_time = event.get("commence_time")
+                if event_id and commence_time:
+                    event_data[event_id] = commence_time
+                    total_events += 1
+        print(
+            f"✅ Extracted {len(event_data)} unique event IDs from {total_events} total current events"
+        )
+        return event_data
+
+    def save_event_ids_to_storage(
+        self,
+        event_data: Dict[str, str],
+        bucket_name: str,
+        catalog: str,
+        table: str,
+        season: str,
+        target_date: date = None,
+    ) -> Optional[str]:
+        """
+        Save event IDs and commence times to GCS in a structured format.
+        
+        Args:
+            event_data: Dictionary mapping event ID to commence time
+            bucket_name: GCS bucket name
+            catalog: Data catalog (e.g., 'odds')
+            table: Table name (e.g., 'event_id')
+            season: Season identifier (e.g., 'season_2025')
+            target_date: Date for the extraction (defaults to today)
+            
+        Returns:
+            GCS path if successful, None if failed
+        """
+        if target_date is None:
+            target_date = date.today()
+
+        filename = f"raw_{catalog}_{table}_{target_date.strftime('%Y-%m-%d')}.json"
+        gcs_path = f"{catalog}/{table}/{season}/{filename}"
+
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(gcs_path)
+
+            data = {
+                "extraction_date": target_date.isoformat(),
+                "total_events": len(event_data),
+                "events": [
+                    {"id": event_id, "commence_time": commence_time}
+                    for event_id, commence_time in sorted(event_data.items())
+                ],
+                "metadata": {
+                    "source": "events",
+                    "extraction_timestamp": datetime.now().isoformat(),
+                    "file_format": "json",
+                },
+            }
+
+            blob.upload_from_string(
+                json.dumps(data, indent=2, ensure_ascii=False),
+                content_type="application/json",
+            )
+
+            print(f"✅ Saved {len(event_data)} events to GCS")
+            return gcs_path
+        except Exception as e:
+            print(f"❌ Error saving event data to storage: {e}")
+            return None
+
+    # ========================================================================================
+    # INJURY REPORT PDF PROCESSING METHODS
+    # ========================================================================================
+
+    def list_pdf_files_in_gcs(
+        self, bucket_name: str, prefix: str = "", target_dates: List[str] = None
+    ) -> List[str]:
+        """
+        Lista arquivos PDF no Google Cloud Storage, filtrando por datas específicas.
+
+        Args:
+            bucket_name: Nome do bucket do GCS
+            prefix: Prefixo para filtrar arquivos (opcional)
+            target_dates: Lista de datas no formato YYYY-MM-DD para filtrar arquivos (opcional)
+
+        Returns:
+            Lista de nomes dos arquivos PDF filtrados por datas
+        """
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        blobs = bucket.list_blobs(prefix=prefix)
+        all_pdf_files = [blob.name for blob in blobs if blob.name.lower().endswith(".pdf")]
+
+        if target_dates:
+            # Filtrar por múltiplas datas
+            date_filtered_files = []
+            for target_date in target_dates:
+                files_for_date = [f for f in all_pdf_files if target_date in f]
+                date_filtered_files.extend(files_for_date)
+                print(f"🎯 PDFs da data {target_date}: {len(files_for_date)}")
+
+            print(f"📁 Total PDFs no bucket: {len(all_pdf_files)}")
+            print(f"🎯 Total PDFs das datas {target_dates}: {len(date_filtered_files)}")
+        else:
+            # Se não especificou datas, pegar todos os PDFs
+            date_filtered_files = all_pdf_files
+            print(f"📁 Total PDFs no bucket: {len(all_pdf_files)}")
+            print("🎯 Processando todos os PDFs disponíveis")
+
+        return date_filtered_files
+
+    def download_pdf_from_gcs(self, bucket_name: str, blob_name: str, local_path: str) -> bool:
+        """
+        Baixa um arquivo PDF do GCS para um arquivo local temporário.
+
+        Args:
+            bucket_name: Nome do bucket
+            blob_name: Nome do arquivo no GCS
+            local_path: Caminho local para salvar
+
+        Returns:
+            True se sucesso, False caso contrário
+        """
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+
+            blob.download_to_filename(local_path)
+            return True
+
+        except Exception:
+            return False
+
+    def process_injury_report_pdfs(
+        self,
+        bucket_name: str,
+        catalog: str,
+        table: str,
+        season: str,
+        project_id: str,
+        target_dates: List[str] = None,
+    ) -> bool:
+        """
+        Processa PDFs de injury reports e insere no BigQuery.
+
+        Args:
+            bucket_name: Nome do bucket do GCS
+            catalog: Catálogo de dados
+            table: Nome da tabela
+            season: Temporada para organização
+            project_id: ID do projeto GCP
+            target_dates: Lista de datas para filtrar
+
+        Returns:
+            bool: True se sucesso, False caso contrário
+        """
+        try:
+            import tempfile
+            import os
+            import gc
+            from lib_dev.pdfextractor import PDFTableExtractor
+
+            # Configurar prefixo e paths
+            pdf_prefix = f"{catalog}/{table}/{season}/"
+            dataset_id = catalog
+            table_id = f"raw_{table}"
+
+            print(f"🚀 Pipeline Injury Report | Bucket: {bucket_name}")
+            if target_dates:
+                print(f"🎯 Filtrando por datas: {target_dates}")
+            else:
+                print("🎯 Processando todos os PDFs disponíveis")
+
+            # 1. Listar arquivos PDF no GCS
+            all_pdf_files = self.list_pdf_files_in_gcs(bucket_name, pdf_prefix, target_dates)
+
+            if not all_pdf_files:
+                print("✅ Nenhum arquivo encontrado para processar")
+                return False
+
+            print(f"📁 Total de PDFs encontrados: {len(all_pdf_files)}")
+
+            # 2. Processar todos os PDFs: extrair dados de cada PDF
+            all_dataframes = []
+            error_stats = {
+                "download_errors": 0,
+                "extraction_errors": 0,
+                "bigquery_errors": 0,
+            }
+            failed_files = []
+
+            print(f"📥 Extraindo dados dos {len(all_pdf_files)} PDFs...")
+
+            for i, pdf_file in enumerate(all_pdf_files, 1):
+                filename = pdf_file.split("/")[-1]
+                print(f"[{i}/{len(all_pdf_files)}] {filename}", end="")
+
+                # Criar arquivo temporário
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+                    temp_path = temp_file.name
+
+                try:
+                    # Baixar do GCS
+                    if not self.download_pdf_from_gcs(bucket_name, pdf_file, temp_path):
+                        print(" ❌ Download")
+                        error_stats["download_errors"] += 1
+                        failed_files.append(filename)
+                        continue
+
+                    # Extrair dados PDF
+                    try:
+                        extractor = PDFTableExtractor(temp_path)
+                        df = extractor.get_all_players_from_pdf()
+
+                        if df.empty:
+                            print(" ⚠️ 0 linhas extraídas")
+                        else:
+                            df = extractor.sanitize_column_names(df)
+
+                            # Verificar se coluna current_status está presente
+                            if "current_status" in df.columns:
+                                status_found = df["current_status"].value_counts()
+                                print(f" 🔍 Status detectados: {len(status_found)} tipos diferentes")
+                            else:
+                                print(" ⚠️ Coluna 'current_status' não encontrada!")
+
+                            # Adicionar metadados do arquivo fonte
+                            df["source_file"] = pdf_file
+                            df["row_order"] = range(1, len(df) + 1)
+
+                            # Acumular DataFrame
+                            all_dataframes.append(df)
+                            print(f" ✅ {len(df)} linhas extraídas")
+
+                        # Limpeza explícita de memória
+                        del df
+                        del extractor
+
+                    except Exception as e:
+                        error_msg = str(e)
+                        print(f" ❌ Extração: {error_msg[:50]}...")
+                        error_stats["extraction_errors"] += 1
+                        failed_files.append(filename)
+
+                finally:
+                    # Limpar arquivo temporário
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+
+                    # Limpeza adicional de memória a cada 5 arquivos
+                    if i % 5 == 0:
+                        gc.collect()
+
+            # 3. Consolidar dados e inserir no BigQuery
+            total_rows = 0
+            total_processed = 0
+
+            if all_dataframes:
+                print(f"\n📤 Consolidando e inserindo {len(all_dataframes)} PDFs no BigQuery...")
+
+                try:
+                    # Consolidar todos os DataFrames
+                    combined_df = pd.concat(all_dataframes, ignore_index=True)
+
+                    # Recalcular row_order global
+                    combined_df["row_order"] = range(1, len(combined_df) + 1)
+                    total_rows = len(combined_df)
+
+                    # Inserir tudo no BigQuery de uma vez
+                    self.upload_to_bigquery(
+                        data=combined_df,
+                        project_id=project_id,
+                        dataset_id=dataset_id,
+                        table_id=table_id,
+                        write_disposition="WRITE_APPEND",
+                    )
+
+                    total_processed = len(all_dataframes)
+                    print(f"✅ BigQuery: {total_processed} PDFs → {total_rows} registros inseridos")
+
+                    # Limpeza total da memória
+                    del combined_df
+                    del all_dataframes
+                    gc.collect()
+
+                except Exception as e:
+                    print(f"❌ Erro BigQuery: {str(e)}")
+                    error_stats["bigquery_errors"] = 1
+
+            # 4. Resumo final
+            total_errors = sum(error_stats.values())
+            success_rate = (total_processed / len(all_pdf_files)) * 100 if all_pdf_files else 0
+
+            print("\n📊 RESUMO FINAL")
+            print("=" * 50)
+            print(f"📁 PDFs processados: {len(all_pdf_files)}")
+            print(f"✅ Sucessos: {total_processed} ({success_rate:.1f}%)")
+            print(f"❌ Falhas: {total_errors}")
+            print(f"📊 Total de registros: {total_rows}")
+
+            if total_processed > 0:
+                print("💾 Dados inseridos no BigQuery com sucesso!")
+
+            return total_processed > 0
+
+        except Exception as e:
+            print(f"❌ Erro no processamento: {e}")
+            return False

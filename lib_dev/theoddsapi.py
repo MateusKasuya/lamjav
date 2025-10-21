@@ -11,9 +11,8 @@ import time
 from typing import List, Optional, Any, Dict, TypeVar, Callable
 from pathlib import Path
 
-# Load .env from project root
-project_root = Path(__file__).parent.parent
-load_dotenv(project_root / ".env")
+
+load_dotenv()
 
 T = TypeVar("T")
 
@@ -392,6 +391,117 @@ class TheOddsAPILib:
             self._handle_api_exceptions(e, "get_participants")
             return None
 
+    def get_events(
+        self,
+        sport: str,
+        date_format: str = "iso",
+        commence_time_from: Optional[str] = None,
+        commence_time_to: Optional[str] = None,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        Get a list of upcoming events for a specific sport.
+
+        Args:
+            sport: The sport key (e.g., 'basketball_nba')
+            date_format: Format for timestamps ('unix' or 'iso'). Defaults to 'iso'
+            commence_time_from: Filter games from this time (ISO 8601). Optional
+            commence_time_to: Filter games until this time (ISO 8601). Optional
+
+        Returns:
+            List of event objects if successful, None if failed
+        """
+        try:
+            print(f"Getting events for sport: {sport}")
+
+            params: Dict[str, Any] = {
+                "dateFormat": date_format,
+            }
+
+            if commence_time_from:
+                params["commenceTimeFrom"] = commence_time_from
+            if commence_time_to:
+                params["commenceTimeTo"] = commence_time_to
+
+            events_data = self._make_request(
+                f"/sports/{sport}/events", params, "get_events"
+            )
+
+            print(f"Successfully fetched {len(events_data)} events")
+            return events_data
+
+        except Exception as e:
+            self._handle_api_exceptions(e, "get_events")
+            return None
+
+    def get_event_odds(
+        self,
+        sport: str,
+        event_id: str,
+        regions: str = "us",
+        markets: Optional[str] = None,
+        date_format: str = "iso",
+        odds_format: str = "decimal",
+        bookmakers: Optional[str] = None,
+        include_links: bool = False,
+        include_sids: bool = False,
+        include_bet_limits: bool = False,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        Get odds for a specific event.
+
+        Args:
+            sport: The sport key (e.g., 'basketball_nba')
+            event_id: The specific event ID
+            regions: Comma-separated regions (us, uk, au, eu). Defaults to 'us'
+            markets: Comma-separated markets. Optional
+            date_format: 'unix' or 'iso'. Defaults to 'iso'
+            odds_format: 'decimal' or 'american'. Defaults to 'decimal'
+            bookmakers: Comma-separated bookmaker keys. Optional
+            include_links: Include bookmaker links. Defaults to False
+            include_sids: Include source IDs. Defaults to False
+            include_bet_limits: Include bet limits. Defaults to False
+
+        Returns:
+            List of markets for the event if successful, None if failed
+        """
+        try:
+            print(f"Getting event odds for event {event_id} ({sport})")
+
+            params: Dict[str, Any] = {
+                "regions": regions,
+                "dateFormat": date_format,
+                "oddsFormat": odds_format,
+            }
+
+            if markets:
+                params["markets"] = markets
+            if bookmakers:
+                params["bookmakers"] = bookmakers
+            if include_links:
+                params["includeLinks"] = "true"
+            if include_sids:
+                params["includeSids"] = "true"
+            if include_bet_limits:
+                params["includeBetLimits"] = "true"
+
+            event_odds = self._make_request(
+                f"/sports/{sport}/events/{event_id}/odds",
+                params,
+                "get_event_odds",
+            )
+
+            # The endpoint returns a list of bookmaker markets
+            if isinstance(event_odds, list):
+                print(f"Successfully fetched event odds. Markets returned: {len(event_odds)}")
+            else:
+                print("Successfully fetched event odds")
+
+            return event_odds
+
+        except Exception as e:
+            self._handle_api_exceptions(e, "get_event_odds")
+            return None
+
     def get_historical_odds(
         self,
         sport: str,
@@ -587,3 +697,107 @@ class TheOddsAPILib:
         except Exception as e:
             self._handle_api_exceptions(e, "get_historical_event_odds")
             return None
+
+    def extract_and_save_event_odds(
+        self,
+        event_data: Dict[str, str],
+        smartbetting_lib,
+        bucket_name: str,
+        catalog: str,
+        table: str,
+        season: str,
+        sport: str = "basketball_nba",
+        regions: str = "us",
+        markets: Optional[str] = None,
+        odds_format: str = "decimal",
+        bookmakers: str = "fanduel",
+        max_events: int = None,
+        delay_seconds: int = 2,
+    ) -> Dict[str, str]:
+        """
+        Extract and save current odds for multiple events.
+        
+        Args:
+            event_data: Dictionary mapping event ID to commence time
+            smartbetting_lib: SmartbettingLib instance for GCS operations
+            bucket_name: GCS bucket name
+            catalog: Data catalog (e.g., 'odds')
+            table: Table name (e.g., 'event_odds')
+            season: Season identifier (e.g., 'season_2025')
+            sport: Sport key (default: 'basketball_nba')
+            regions: Comma-separated regions (default: 'us')
+            markets: Comma-separated markets (optional)
+            odds_format: Odds format (default: 'decimal')
+            bookmakers: Comma-separated bookmaker keys (default: 'fanduel')
+            max_events: Maximum number of events to process (optional)
+            delay_seconds: Delay between API calls (default: 2)
+            
+        Returns:
+            Dictionary mapping event ID to saved file path
+        """
+        print("🚀 Current Event Odds Extraction")
+        print(f"📅 Processing {len(event_data)} events")
+        print("=" * 60)
+
+        if not event_data:
+            print("❌ No event data found")
+            return {}
+
+        # Limit events if specified
+        if max_events and len(event_data) > max_events:
+            event_items = list(event_data.items())[:max_events]
+            event_data = dict(event_items)
+            print(f"🧪 Testing mode: Limited to {max_events} events")
+
+        saved_files: Dict[str, str] = {}
+        processed = 0
+        failed = 0
+        start_time = time.time()
+
+        for event_id, _ in event_data.items():
+            processed += 1
+            print(f"\n[{processed}/{len(event_data)}] Processing event: {event_id[:20]}...")
+            
+            # Fetch odds for this event
+            odds_data = self.get_event_odds(
+                sport=sport,
+                event_id=event_id,
+                regions=regions,
+                markets=markets,
+                odds_format=odds_format,
+                bookmakers=bookmakers,
+            )
+            
+            if odds_data:
+                # Save odds data
+                filename = f"raw_{catalog}_{table}_{bookmakers}_{event_id}.json"
+                gcs_path = f"{catalog}/{table}/{season}/{bookmakers}/{filename}"
+                
+                try:
+                    ndjson_data = smartbetting_lib.convert_to_ndjson(odds_data)
+                    smartbetting_lib.upload_json_to_gcs(ndjson_data, bucket_name, gcs_path)
+                    print(f"✅ Saved odds for event {event_id} to {gcs_path}")
+                    saved_files[event_id] = gcs_path
+                except Exception as e:
+                    print(f"❌ Error saving odds for event {event_id}: {e}")
+                    failed += 1
+            else:
+                failed += 1
+                print("⚠️  No odds data available")
+
+            # Add delay between API calls
+            if processed < len(event_data):
+                print(f"⏳ Waiting {delay_seconds}s...")
+                time.sleep(delay_seconds)
+
+        execution_time = time.time() - start_time
+        print("\n" + "=" * 80)
+        print("📊 CURRENT EVENT ODDS EXTRACTION SUMMARY:")
+        print("=" * 80)
+        print(f"🎯 Events processed: {processed}")
+        print(f"✅ Successfully saved: {len(saved_files)}")
+        print(f"❌ Failed: {failed}")
+        print(f"⏱️  Execution time: {execution_time:.1f} seconds")
+        print("=" * 80)
+
+        return saved_files

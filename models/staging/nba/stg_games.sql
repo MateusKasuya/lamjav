@@ -1,5 +1,4 @@
 {{ config(
-    materialized='view',
     description='Staging table for NBA games with B2B flag from NDJSON external table'
 ) }}
 
