@@ -1,0 +1,431 @@
+# ============================================================
+# EXEMPLO 1: Paralelização Simples
+# Executa todos os NBA services em paralelo
+# ============================================================
+example1_simple_parallel:
+    steps:
+    - parallel_nba_data:
+        parallel:
+          branches:
+            - branch_active_players:
+                steps:
+                  - call_active_players:
+                      call: http.get
+                      args:
+                        url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch_game_stats:
+                steps:
+                  - call_game_stats:
+                      call: http.get
+                      args:
+                        url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch_games:
+                steps:
+                  - call_games:
+                      call: http.get
+                      args:
+                        url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch_season_advanced:
+                steps:
+                  - call_season_advanced:
+                      call: http.get
+                      args:
+                        url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch_season_base:
+                steps:
+                  - call_season_base:
+                      call: http.get
+                      args:
+                        url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch_standings:
+                steps:
+                  - call_standings:
+                      call: http.get
+                      args:
+                        url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+
+# ============================================================
+# EXEMPLO 2: Paralelização com Grupos e Sequência
+# Executa grupos em paralelo, mas mantém ordem entre grupos
+# ============================================================
+example2_grouped_parallel:
+    steps:
+    # Grupo 1: NBA e Odds em paralelo
+    - parallel_data_extraction:
+        parallel:
+          branches:
+            - nba_branch:
+                steps:
+                  - nba_active_players:
+                      call: http.get
+                      args:
+                        url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                  - nba_games:
+                      call: http.get
+                      args:
+                        url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                  - nba_team_standings:
+                      call: http.get
+                      args:
+                        url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - odds_branch:
+                steps:
+                  - odds_events:
+                      call: http.get
+                      args:
+                        url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                  - odds_extract_event_ids:
+                      call: http.get
+                      args:
+                        url: https://odds-extract-event-ids-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                  - odds_event_odds:
+                      call: http.get
+                      args:
+                        url: https://odds-event-odds-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - injury_branch:
+                steps:
+                  - injury_report:
+                      call: http.get
+                      args:
+                        url: https://injury-report-extractor-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+    
+    # Grupo 2: Depara em paralelo (só executa após Grupo 1 terminar)
+    - parallel_depara:
+        parallel:
+          branches:
+            - depara_injury:
+                steps:
+                  - depara_nba_injury:
+                      call: http.get
+                      args:
+                        url: https://depara-nba-injury-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - depara_odds:
+                steps:
+                  - depara_nba_odds:
+                      call: http.get
+                      args:
+                        url: https://depara-nba-odds-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+    
+    # Grupo 3: DBT jobs em paralelo (só executa após Grupo 2 terminar)
+    - parallel_dbt:
+        parallel:
+          branches:
+            - dbt_staging_branch:
+                steps:
+                  - dbt_staging:
+                      call: googleapis.run.v2.projects.locations.jobs.run
+                      args:
+                        name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-staging
+            - dbt_marts_branch:
+                steps:
+                  - dbt_intermediate_marts:
+                      call: googleapis.run.v2.projects.locations.jobs.run
+                      args:
+                        name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-intermediate-marts
+            - pdf_processor_branch:
+                steps:
+                  - pdf_processor:
+                      call: googleapis.run.v2.projects.locations.jobs.run
+                      args:
+                        name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/pdf-processor
+
+# ============================================================
+# EXEMPLO 3: Paralelização com Limite de Concorrência
+# Útil para não sobrecarregar APIs ou recursos
+# ============================================================
+example3_with_concurrency_limit:
+    steps:
+    - parallel_limited:
+        parallel:
+          concurrency_limit: 3  # Máximo 3 branches rodando ao mesmo tempo
+          branches:
+            - branch1:
+                steps:
+                  - call1:
+                      call: http.get
+                      args:
+                        url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch2:
+                steps:
+                  - call2:
+                      call: http.get
+                      args:
+                        url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch3:
+                steps:
+                  - call3:
+                      call: http.get
+                      args:
+                        url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch4:
+                steps:
+                  - call4:
+                      call: http.get
+                      args:
+                        url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch5:
+                steps:
+                  - call5:
+                      call: http.get
+                      args:
+                        url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+            - branch6:
+                steps:
+                  - call6:
+                      call: http.get
+                      args:
+                        url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+
+# ============================================================
+# EXEMPLO 4: Paralelização com Tratamento de Erros
+# Continua mesmo se alguma branch falhar
+# ============================================================
+example4_with_error_handling:
+    steps:
+    - parallel_with_error_handling:
+        parallel:
+          exception_policy: continueAll  # Continua mesmo se alguma branch falhar
+          branches:
+            - nba_branch:
+                steps:
+                  - nba_call:
+                      try:
+                        call: http.get
+                        args:
+                          url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                          auth:
+                            type: OIDC
+                      except:
+                        as: e
+                        steps:
+                          - log_nba_error:
+                              call: sys.log
+                              args:
+                                text: ${"NBA call failed: " + e.message}
+            - odds_branch:
+                steps:
+                  - odds_call:
+                      try:
+                        call: http.get
+                        args:
+                          url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+                          auth:
+                            type: OIDC
+                      except:
+                        as: e
+                        steps:
+                          - log_odds_error:
+                              call: sys.log
+                              args:
+                                text: ${"Odds call failed: " + e.message}
+
+# ============================================================
+# EXEMPLO 5: Paralelização com Variáveis Compartilhadas
+# Coleta resultados de múltiplas branches
+# ============================================================
+example5_with_shared_variables:
+    steps:
+    - initialize:
+        assign:
+          - results: {}
+    
+    - parallel_with_results:
+        parallel:
+          shared: [results]  # Variável compartilhada entre branches
+          branches:
+            - nba_branch:
+                steps:
+                  - call_nba:
+                      call: http.get
+                      args:
+                        url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                      result: nba_response
+                  - store_nba_result:
+                      assign:
+                        - results.nba: nba_response.code
+            - odds_branch:
+                steps:
+                  - call_odds:
+                      call: http.get
+                      args:
+                        url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+                        auth:
+                          type: OIDC
+                      result: odds_response
+                  - store_odds_result:
+                      assign:
+                        - results.odds: odds_response.code
+    
+    - log_results:
+        call: sys.log
+        args:
+          text: ${results}
+
+# ============================================================
+# EXEMPLO 6: Workflow Otimizado (RECOMENDADO)
+# Paraleliza tudo que pode ser paralelo, sequencia o que precisa
+# ============================================================
+example6_optimized_workflow:
+    steps:
+    # Fase 1: Extração de dados (tudo em paralelo)
+    - phase1_data_extraction:
+        parallel:
+          branches:
+            # NBA data
+            - nba_active_players:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - nba_game_player_stats:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - nba_games:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - nba_season_advanced:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - nba_season_base:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - nba_standings:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            # Odds data
+            - odds_event_odds:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://odds-event-odds-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - odds_events:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - odds_extract_event_ids:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://odds-extract-event-ids-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            # Injury data
+            - injury_report_extractor:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://injury-report-extractor-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+    
+    # Fase 2: De-para (depende da Fase 1)
+    - phase2_depara:
+        parallel:
+          branches:
+            - depara_injury:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://depara-nba-injury-players-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+            - depara_odds:
+                steps:
+                  - call: http.get
+                    args:
+                      url: https://depara-nba-odds-players-yiaf5ytl5q-ue.a.run.app
+                      auth:
+                        type: OIDC
+    
+    # Fase 3: DBT Staging (depende da Fase 2)
+    - phase3_dbt_staging:
+        call: googleapis.run.v2.projects.locations.jobs.run
+        args:
+          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-staging
+    
+    # Fase 4: DBT Marts e PDF processor em paralelo (dependem da Fase 3)
+    - phase4_final_processing:
+        parallel:
+          branches:
+            - dbt_marts:
+                steps:
+                  - call: googleapis.run.v2.projects.locations.jobs.run
+                    args:
+                      name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-intermediate-marts
+            - pdf_processor:
+                steps:
+                  - call: googleapis.run.v2.projects.locations.jobs.run
+                    args:
+                      name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/pdf-processor
+

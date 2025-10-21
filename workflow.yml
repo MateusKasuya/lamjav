@@ -1,0 +1,86 @@
+main:
+    steps:
+    - nba-active-players:
+        call: http.get
+        args:
+          url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - nba-game-player-stats:
+        call: http.get
+        args:
+          url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - nba-games:
+        call: http.get
+        args:
+          url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - nba-season-averages-general-advanced:
+        call: http.get
+        args:
+          url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - nba-season-averages-general-base:
+        call: http.get
+        args:
+          url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - nba-team-standings:
+        call: http.get
+        args:
+          url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - odds-event-odds:
+        call: http.get
+        args:
+          url: https://odds-event-odds-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - odds-events:
+        call: http.get
+        args:
+          url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - odds-extract-event-ids:
+        call: http.get
+        args:
+          url: https://odds-extract-event-ids-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - depara-nba-injury-players:
+        call: http.get
+        args:
+          url: https://depara-nba-injury-players-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - depara-nba-odds-players:
+        call: http.get
+        args:
+          url: https://depara-nba-odds-players-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - injury-report-extractor:
+        call: http.get
+        args:
+          url: https://injury-report-extractor-yiaf5ytl5q-ue.a.run.app
+          auth:
+            type: OIDC
+    - dbt-intermediate-marts:
+        call: googleapis.run.v2.projects.locations.jobs.run
+        args:
+          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-intermediate-marts
+    - dbt-staging:
+        call: googleapis.run.v2.projects.locations.jobs.run
+        args:
+          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-staging
+    - pdf-processor:
+        call: googleapis.run.v2.projects.locations.jobs.run
+        args:
+          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/pdf-processor

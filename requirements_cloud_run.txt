@@ -1,0 +1,33 @@
+# Cloud Run Job requirements for PDF processing with camelot-py
+# This file contains all dependencies needed to run in Cloud Run with system libraries
+
+# Google Cloud dependencies
+google-cloud-storage>=2.10.0
+google-cloud-bigquery>=3.13.0
+
+# Data processing dependencies
+pandas>=2.3.1
+
+# PDF processing dependencies (with system libraries available)
+camelot-py[cv]>=1.0.0
+PyPDF2>=3.0.1
+
+# Additional dependencies for camelot
+opencv-python>=4.8.0
+ghostscript>=0.7
+
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# Type hints and utilities
+typing-extensions>=4.8.0
+
+# Standard library dependencies (included in Python 3.12+)
+# - sys, os (built-in)
+# - datetime (built-in)
+# - pathlib (built-in)
+# - json (built-in)
+# - re (built-in)
+# - enum (built-in)
+# - tempfile (built-in)
+# - gc (built-in)

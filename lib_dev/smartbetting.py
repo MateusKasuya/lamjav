@@ -771,12 +771,7 @@ class SmartbettingLib:
             import tempfile
             import os
             import gc
-            try:
-                # Try to use the simple version first (Cloud Function compatible)
-                from lib_dev.pdfextractor_simple import PDFTableExtractor
-            except ImportError:
-                # Fallback to original version if available
-                from lib_dev.pdfextractor import PDFTableExtractor
+            from lib_dev.pdfextractor import PDFTableExtractor
 
             # Configurar prefixo e paths
             pdf_prefix = f"{catalog}/{table}/{season}/"

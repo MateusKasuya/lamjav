@@ -1,0 +1,58 @@
+# Use Python 3.12 slim image as base
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DBT_PROFILES_DIR=/app \
+    PYTHONPATH=/app \
+    CAMELOT_TEMP_DIR=/tmp/camelot \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    # Basic utilities
+    wget \
+    curl \
+    unzip \
+    # SQLite development libraries
+    libsqlite3-dev \
+    sqlite3 \
+    # Ghostscript for PDF processing
+    ghostscript \
+    # Tesseract OCR
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    # OpenCV and OpenGL dependencies
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1-mesa-dri \
+    libgl1 \
+    libglib2.0-0 \
+    # Additional dependencies for camelot
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file
+COPY requirements_cloud_run.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements_cloud_run.txt
+
+# Copy application code
+COPY . .
+
+# Create directories for camelot temp files
+RUN mkdir -p /tmp/camelot && \
+    chmod 777 /tmp/camelot
+
+# Default command runs PDF processing
+CMD ["python", "injuryreport_dev/raw/raw_injury_report.py"]

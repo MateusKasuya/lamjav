@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  pdf-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.pdf-processor
+    container_name: lamjav_pdf_processor
+    environment:
+      # Set these environment variables in your .env file or pass them directly
+      - DBT_PROJECT=${DBT_PROJECT}
+      - DBT_DATASET=${DBT_DATASET}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+    volumes:
+      # Mount Google Cloud credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials.json:ro

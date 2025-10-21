@@ -14,7 +14,7 @@ build/
 env/
 venv/
 
-# dbt (not needed for PDF processing)
+# dbt
 target/
 dbt_packages/
 logs/
@@ -30,10 +30,13 @@ logs/
 *.swp
 *.swo
 
-# Development (keep only what we need)
+# Development
+*_dev/
 bi_dev/
 nba_dev/
 odds_dev/
+injuryreport_dev/
+lib_dev/
 
 # Documentation
 docs/
@@ -44,11 +47,4 @@ poetry.lock
 pyproject.toml
 requirements.txt
 requirements_odds.txt
-requirements_dbt.txt
-requirements_raw_injury_report.txt
 
-# Docker files (except the one we're using)
-Dockerfile
-Dockerfile.staging
-Dockerfile.exclude-staging
-docker-compose.yml
