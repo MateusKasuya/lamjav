@@ -9,7 +9,7 @@
 CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.nba.raw_active_players`
 OPTIONS (
   format = 'NEWLINE_DELIMITED_JSON',
-  uris = ['gs://smartbetting-landing/nba/active_players/raw_nba_active_players.json']
+  uris = ['gs://smartbetting-landing/nba/active_players/2025/raw_nba_active_players_2025.json']
 );
 
 -- Sample queries to test the external table:

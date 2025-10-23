@@ -12,7 +12,7 @@ CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.odds.raw_historical_
 OPTIONS (
   format = 'NEWLINE_DELIMITED_JSON',
   uris = [
-    'gs://smartbetting-landing/odds/historical_event_odds/2024/draftkings/raw_odds_historical_event_odds_draftkings_*.json'
+    'gs://smartbetting-landing/odds/event_odds/2025/draftkings/raw_odds_event_odds_draftkings_*.json'
     -- Add more bookmakers as needed:
     --'gs://smartbetting-landing/odds/historical_event_odds/2024/fanduel/raw_odds_historical_event_odds_fanduel_*.json',
     -- 'gs://smartbetting-landing/odds/historical_event_odds/2024/betmgm/raw_odds_historical_event_odds_betmgm_*.json'

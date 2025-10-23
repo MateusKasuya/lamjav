@@ -34,8 +34,8 @@ def main() -> NoReturn:
     season = Season.SEASON_2025
 
     # Define date window for file naming (allows backfilling if needed)
-    start_date = date.today()
-    end_date = date.today()
+    start_date = date(2025,10,21) #date.today()
+    end_date = date.today() + timedelta(days=1)
 
     # Initialize API clients
     theoddsapi = TheOddsAPILib()
