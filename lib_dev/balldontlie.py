@@ -19,7 +19,6 @@ from typing import List, Optional, Any, Dict, Callable, TypeVar
 import time
 from datetime import date, timedelta
 import requests
-from pathlib import Path
 
 # Load .env from current directory (Cloud Run)
 load_dotenv()
@@ -515,16 +514,30 @@ class BalldontlieLib:
             response = self.api.nba.standings.get(season=season)
             data = response.data if response and hasattr(response, "data") else None
             return {"data": data, "status": 200, "error": None, "details": None}
-        except (AuthenticationError, ValidationError, NotFoundError, RateLimitError, ServerError, BallDontLieException) as e:  # type: ignore[misc]
+        except (
+            AuthenticationError,
+            ValidationError,
+            NotFoundError,
+            RateLimitError,
+            ServerError,
+            BallDontLieException,
+        ) as e:  # type: ignore[misc]
             status = getattr(e, "status_code", None)
             details = getattr(e, "response_data", None)
             message = str(e)
             print(
                 f"Detailed error during team standings retrieval: status={status}, message={message}, details={details}"
             )
-            return {"data": None, "status": status, "error": message, "details": details}
+            return {
+                "data": None,
+                "status": status,
+                "error": message,
+                "details": details,
+            }
         except Exception as e:
-            print(f"Unexpected error during team standings retrieval (detailed): {str(e)}")
+            print(
+                f"Unexpected error during team standings retrieval (detailed): {str(e)}"
+            )
             return {"data": None, "status": None, "error": str(e), "details": None}
 
     def get_games(self, game_date: date) -> Optional[List[Any]]:

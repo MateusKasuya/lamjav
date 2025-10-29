@@ -8,7 +8,6 @@ it to Google Cloud Storage in the landing layer of the data lake.
 import sys
 import os
 from typing import NoReturn
-from datetime import datetime
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -59,8 +58,10 @@ def main() -> NoReturn:
 
         # Extract report information for logging
         report_info = injury_client._extract_report_info(filename)
-        
-        print(f"✅ Successfully fetched injury report: {filename} ({len(pdf_data)} bytes)")
+
+        print(
+            f"✅ Successfully fetched injury report: {filename} ({len(pdf_data)} bytes)"
+        )
         print(f"📅 Report date: {report_info['date']}")
         print(f"🕐 Report time: {report_info['time']}")
         print(f"📊 Period: {report_info['period']}")
@@ -73,7 +74,7 @@ def main() -> NoReturn:
         if not success:
             raise Exception("Failed to upload injury report to Google Cloud Storage")
 
-        print(f"✅ Successfully uploaded injury report to Google Cloud Storage")
+        print("✅ Successfully uploaded injury report to Google Cloud Storage")
         print(f"📁 Stored in: gs://{bucket}/{gcs_blob_name}")
         print(f"🎯 Season: {season} (organizational)")
 

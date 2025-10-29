@@ -55,7 +55,6 @@ cleaned_data AS (
         END AS winner_team_id,
         ROW_NUMBER() OVER (PARTITION BY player.id ORDER BY game.id DESC) AS game_number
     FROM source_data
-    --WHERE game.date < '2025-04-07'
 )
 
 SELECT

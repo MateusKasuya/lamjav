@@ -10,8 +10,8 @@ WITH historical_event_odds AS (
         player_name,
         market_key,
         line
-    FROM {{ ref('stg_historical_event_odds') }}
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name, market_key ORDER BY snapshot_timestamp DESC) = 1
+    FROM {{ ref('stg_event_odds') }}
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name, market_key ORDER BY commence_time DESC) = 1
 )
 
 SELECT
@@ -37,7 +37,7 @@ SELECT
     END AS home_away
 FROM
     {{ ref('int_game_player_stats') }} AS gps
-LEFT JOIN {{ ref('stg_games') }} AS g ON gps.game_id = g.game_id AND g.game_date < '2025-04-07'
+LEFT JOIN {{ ref('stg_games') }} AS g ON gps.game_id = g.game_id AND g.game_date < CURRENT_DATE()
 LEFT JOIN {{ source('bi_dev', 'de_para_nba_odds_players') }} AS de_para ON gps.player_id = de_para.nba_player_id
 LEFT JOIN historical_event_odds AS o ON de_para.odds_player_name = o.player_name AND gps.stat_type = o.market_key
 ORDER BY

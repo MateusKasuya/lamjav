@@ -34,6 +34,7 @@ def main() -> NoReturn:
     """
     # Load environment variables
     from dotenv import load_dotenv
+
     load_dotenv()
 
     # Initialize constants
@@ -56,7 +57,9 @@ def main() -> NoReturn:
 
     print("Starting raw injury report data pipeline")
     print(f"Processing date: {today_str} (today only)")
-    print(f"Transformation date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} (always current)")
+    print(
+        f"Transformation date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} (always current)"
+    )
     print("=" * 80)
 
     try:

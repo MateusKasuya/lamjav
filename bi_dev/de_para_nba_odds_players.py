@@ -44,7 +44,7 @@ def main():
         # Initialize components
         print("\n1. Initializing components...")
         fuzzy_matcher = FuzzyStringMatch(project_id)
-        smartbetting = SmartbettingLib()
+        SmartbettingLib()
 
         # Fetch data from BigQuery
         print("\n2. Fetching data from BigQuery...")

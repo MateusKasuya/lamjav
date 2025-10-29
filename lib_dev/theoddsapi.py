@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 import os
 import time
 from typing import List, Optional, Any, Dict, TypeVar, Callable
-from pathlib import Path
 
 
 load_dotenv()
@@ -492,7 +491,9 @@ class TheOddsAPILib:
 
             # The endpoint returns a list of bookmaker markets
             if isinstance(event_odds, list):
-                print(f"Successfully fetched event odds. Markets returned: {len(event_odds)}")
+                print(
+                    f"Successfully fetched event odds. Markets returned: {len(event_odds)}"
+                )
             else:
                 print("Successfully fetched event odds")
 
@@ -716,7 +717,7 @@ class TheOddsAPILib:
     ) -> Dict[str, str]:
         """
         Extract and save current odds for multiple events.
-        
+
         Args:
             event_data: Dictionary mapping event ID to commence time
             smartbetting_lib: SmartbettingLib instance for GCS operations
@@ -731,7 +732,7 @@ class TheOddsAPILib:
             bookmakers: Comma-separated bookmaker keys (default: 'fanduel')
             max_events: Maximum number of events to process (optional)
             delay_seconds: Delay between API calls (default: 2)
-            
+
         Returns:
             Dictionary mapping event ID to saved file path
         """
@@ -756,8 +757,10 @@ class TheOddsAPILib:
 
         for event_id, _ in event_data.items():
             processed += 1
-            print(f"\n[{processed}/{len(event_data)}] Processing event: {event_id[:20]}...")
-            
+            print(
+                f"\n[{processed}/{len(event_data)}] Processing event: {event_id[:20]}..."
+            )
+
             # Fetch odds for this event
             odds_data = self.get_event_odds(
                 sport=sport,
@@ -767,15 +770,17 @@ class TheOddsAPILib:
                 odds_format=odds_format,
                 bookmakers=bookmakers,
             )
-            
+
             if odds_data:
                 # Save odds data
-                filename = f"raw_{catalog}_{table}_{bookmakers}_{event_id}.json"
+                filename = f"raw_{catalog}_event_odds_{bookmakers}_{event_id}.json"
                 gcs_path = f"{catalog}/{table}/{season}/{bookmakers}/{filename}"
-                
+
                 try:
                     ndjson_data = smartbetting_lib.convert_to_ndjson(odds_data)
-                    smartbetting_lib.upload_json_to_gcs(ndjson_data, bucket_name, gcs_path)
+                    smartbetting_lib.upload_json_to_gcs(
+                        ndjson_data, bucket_name, gcs_path
+                    )
                     print(f"✅ Saved odds for event {event_id} to {gcs_path}")
                     saved_files[event_id] = gcs_path
                 except Exception as e:

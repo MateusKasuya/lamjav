@@ -419,10 +419,10 @@ class NBAInjuryReport:
                 return False
 
             pdf_data, filename = result
-            
+
             # Extrair informações do relatório do filename
             report_info = self._extract_report_info(filename)
-            
+
             print(f"✅ Sucesso: {filename} ({len(pdf_data)} bytes)")
             print(f"📅 Data do relatório: {report_info['date']}")
             print(f"🕐 Hora do relatório: {report_info['time']}")
@@ -437,7 +437,9 @@ class NBAInjuryReport:
                 )
                 if success:
                     print("✅ Upload para GCS concluído com sucesso!")
-                    print(f"📍 Localização: gs://{bucket_name}/{catalog}/{schema}/{filename}")
+                    print(
+                        f"📍 Localização: gs://{bucket_name}/{catalog}/{schema}/{filename}"
+                    )
                 return success
             else:
                 print("ℹ️ Upload para GCS desabilitado")
@@ -450,54 +452,52 @@ class NBAInjuryReport:
     def _extract_report_info(self, filename: str) -> dict:
         """
         Extrai informações de data e hora do filename do relatório.
-        
+
         Args:
             filename: Nome do arquivo do relatório
-            
+
         Returns:
             dict: Informações extraídas (date, time, period)
         """
         try:
             import re
-            
+
             # Remover extensão .pdf
-            name_without_ext = filename.replace('.pdf', '')
-            
+            name_without_ext = filename.replace(".pdf", "")
+
             # Padrão para data YYYY-MM-DD
-            date_pattern = r'(\d{4}-\d{2}-\d{2})'
+            date_pattern = r"(\d{4}-\d{2}-\d{2})"
             date_match = re.search(date_pattern, name_without_ext)
-            
+
             # Padrão para hora HHMM ou HH:MM
-            time_pattern = r'(\d{1,2})(\d{2})?(AM|PM)'
+            time_pattern = r"(\d{1,2})(\d{2})?(AM|PM)"
             time_match = re.search(time_pattern, name_without_ext, re.IGNORECASE)
-            
+
             if date_match and time_match:
                 report_date = date_match.group(1)
                 hour = int(time_match.group(1))
                 period = time_match.group(3).upper()
-                
+
                 # Formatar hora para exibição
                 time_str = f"{hour:02d}{period}"
-                
-                return {
-                    'date': report_date,
-                    'time': time_str,
-                    'period': period
-                }
+
+                return {"date": report_date, "time": time_str, "period": period}
             else:
                 # Se não conseguir extrair, usar informações genéricas
                 return {
-                    'date': 'Data não identificada',
-                    'time': 'Hora não identificada', 
-                    'period': 'Período não identificado'
+                    "date": "Data não identificada",
+                    "time": "Hora não identificada",
+                    "period": "Período não identificado",
                 }
-                
+
         except Exception as e:
-            print(f"⚠️ Aviso: Não foi possível extrair informações do filename: {str(e)}")
+            print(
+                f"⚠️ Aviso: Não foi possível extrair informações do filename: {str(e)}"
+            )
             return {
-                'date': 'Data não identificada',
-                'time': 'Hora não identificada',
-                'period': 'Período não identificado'
+                "date": "Data não identificada",
+                "time": "Hora não identificada",
+                "period": "Período não identificado",
             }
 
 

@@ -9,6 +9,7 @@ sys.path.insert(0, current_dir)
 # Agora importar o active_players
 from active_players import main
 
+
 @functions_framework.http
 def season_averages(request):
     """NBA Season Averages General Advanced Pipeline"""

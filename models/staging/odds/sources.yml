@@ -5,18 +5,27 @@ sources:
     description: "Odds data from external tables in Google Cloud Storage"
     schema: odds
     tables:
-      - name: raw_historical_event_odds
-        description: "Historical event odds data from DraftKings and FanDuel (NDJSON format)"
+      - name: raw_event_odds
+        description: "Current event odds data from DraftKings (NDJSON format - raw API response)"
         columns:
-          - name: data
-            description: "Main event data containing all odds information"
+          - name: id
+            description: "Unique event ID from the odds API"
+            data_type: string
+          - name: sport_key
+            description: "Sport identifier (e.g., basketball_nba)"
+            data_type: string
+          - name: sport_title
+            description: "Sport display name"
+            data_type: string
+          - name: commence_time
+            description: "Event start time (ISO 8601 format)"
+            data_type: string
+          - name: home_team
+            description: "Home team name"
+            data_type: string
+          - name: away_team
+            description: "Away team name"
+            data_type: string
+          - name: bookmakers
+            description: "Array of bookmaker odds data with nested markets and outcomes"
             data_type: json
-          - name: timestamp
-            description: "Snapshot timestamp when data was captured"
-            data_type: string
-          - name: previous_timestamp
-            description: "Previous snapshot timestamp"
-            data_type: string
-          - name: next_timestamp
-            description: "Next snapshot timestamp"
-            data_type: string

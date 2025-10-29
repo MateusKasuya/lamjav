@@ -49,7 +49,7 @@ def main() -> NoReturn:
         # Fetch team standings with structured status for diagnostics
         result = balldontlie.get_team_standings_with_status(season)
         status = result.get("status")
-        error = result.get("error")
+        result.get("error")
         details = result.get("details")
         response = result.get("data")
 

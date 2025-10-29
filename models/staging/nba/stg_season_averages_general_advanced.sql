@@ -20,9 +20,6 @@ cleaned_data AS (
 
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data
-    WHERE
-        season_type = 'regular'
-        AND season = 2024
 )
 
 SELECT * FROM cleaned_data

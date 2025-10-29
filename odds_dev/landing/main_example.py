@@ -9,6 +9,7 @@ sys.path.insert(0, current_dir)
 # Agora importar o active_players
 from events import main
 
+
 @functions_framework.http
 def events(request):
     """Odds API Events Pipeline"""

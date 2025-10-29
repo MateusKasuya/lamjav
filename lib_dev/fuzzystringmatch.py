@@ -75,14 +75,14 @@ class FuzzyStringMatch:
                 player_name,
                 player_name_home_team,
                 player_name_away_team,
-                snapshot_timestamp,
+                commence_time,
                 -- Rank by most recent snapshot to get current team context
                 ROW_NUMBER() OVER (
                     PARTITION BY player_name 
-                    ORDER BY snapshot_timestamp DESC
+                    ORDER BY commence_time DESC
                 ) as rn
             FROM
-                `{project_id}.odds.stg_historical_event_odds`
+                `{project_id}.odds.stg_event_odds`
         )
         SELECT
             player_name,

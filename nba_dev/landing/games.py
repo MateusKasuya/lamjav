@@ -40,7 +40,7 @@ def main() -> NoReturn:
 
     # Set start date for daily extraction
     start_date = date.today()  # 22/10/2024
-    end_date = date(2025,10,30)  # Today's date
+    end_date = date(2026, 5, 1)  # Today's date
 
     # Initialize API clients
     balldontlie = BalldontlieLib()

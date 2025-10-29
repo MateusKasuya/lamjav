@@ -12,10 +12,10 @@ latest_odds AS (
         player_name,
         market_key,
         line
-    FROM {{ ref('stg_historical_event_odds') }}
+    FROM {{ ref('stg_event_odds') }}
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY player_name, market_key
-        ORDER BY snapshot_timestamp DESC
+        ORDER BY commence_time DESC
     ) = 1
 ),
 
@@ -133,8 +133,8 @@ players_with_injury_status AS (
     SELECT
         pr.*,
         ir.current_status,
-        COALESCE(pr.stat_rank = 1 AND ir.current_status IS NOT null, FALSE) AS is_leader_with_injury,
-        COALESCE(pr.stat_rank > 1, FALSE) AS is_available_backup
+        COALESCE(pr.stat_rank = 1 AND ir.current_status IS NOT null, false) AS is_leader_with_injury,
+        COALESCE(pr.stat_rank > 1, false) AS is_available_backup
     FROM player_ratings AS pr
     LEFT JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
         ON pr.player_id = dpp.nba_player_id

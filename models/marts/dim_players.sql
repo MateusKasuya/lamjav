@@ -13,7 +13,6 @@ WITH last_games_text AS (
         {{ ref('stg_game_player_stats') }}
     WHERE
         minutes > 0
-        AND game_date < '2025-04-07'
     GROUP BY
         player_id
 ),
@@ -23,10 +22,10 @@ game_player_stats AS (
         player_id,
         CONCAT(
             'Ultimo Jogo: ',
-            CAST(DATE_DIFF(DATE '2025-04-07', last_game_date, DAY) AS STRING),
+            CAST(DATE_DIFF(CURRENT_DATE(), last_game_date, DAY) AS STRING),
             ' ',
             CASE
-                WHEN DATE_DIFF(DATE '2025-04-07', last_game_date, DAY) = 1 THEN 'dia atras'
+                WHEN DATE_DIFF(CURRENT_DATE(), last_game_date, DAY) = 1 THEN 'dia atras'
                 ELSE 'dias atras'
             END
         ) AS last_game_text
@@ -58,7 +57,6 @@ last_games AS (
                 g.win_loss
             FROM
                 {{ ref('stg_game_player_stats') }} AS g
-            WHERE g.game_date < '2025-04-07'
         )
     )
     WHERE row_num <= 5

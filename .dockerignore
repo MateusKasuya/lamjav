@@ -44,7 +44,6 @@ poetry.lock
 pyproject.toml
 requirements.txt
 requirements_odds.txt
-requirements_dbt.txt
 requirements_raw_injury_report.txt
 
 # Docker files (except the one we're using)

@@ -31,33 +31,33 @@ class HistoricalEventOddsExtractor:
         """Initialize the extractor with API clients."""
         self.theoddsapi = TheOddsAPILib()
         self.smartbetting = SmartbettingLib()
-        self.bucket = Bucket.SMARTBETTING_STORAGE  # Aligned with extract_event_ids.py
+        self.bucket = Bucket.SMARTBETTING_STORAGE
         self.catalog = Catalog.ODDS
-        self.season = Season.SEASON_2024  # Aligned with extract_event_ids.py
-        self.table = Table.HISTORICAL_EVENT_ODDS
+        self.season = Season.SEASON_2025
+        self.table = Table.EVENT_ODDS  # Same as event_odds.py for unified storage
 
-        # Input configuration (from extract_event_ids.py)
-        self.input_table = Table.HISTORICAL_EVENTS
+        # Input configuration - reads directly from EVENTS (optimal for Cloud Functions)
+        self.input_table = Table.EVENTS
 
         # Full markets list for comprehensive odds data
         self.markets = [
-            # "player_points",
-            # "player_rebounds",
-            # "player_assists",
-            # "player_threes",
-            # "player_blocks",
-            # "player_steals",
-            # "player_blocks_steals",
-            # "player_turnovers",
-            # "player_points_rebounds_assists",
-            # "player_points_rebounds",
-            # "player_points_assists",
-            # "player_rebounds_assists",
-            "player_field_goals",
-            "player_frees_made",
-            "player_frees_attempts",
-            # "player_double_double",
-            # "player_triple_double",
+            "player_points",
+            "player_rebounds",
+            "player_assists",
+            "player_threes",
+            "player_blocks",
+            "player_steals",
+            "player_blocks_steals",
+            "player_turnovers",
+            "player_points_rebounds_assists",
+            "player_points_rebounds",
+            "player_points_assists",
+            "player_rebounds_assists",
+            # "player_field_goals",
+            # "player_frees_made",
+            # "player_frees_attempts",
+            "player_double_double",
+            "player_triple_double",
         ]
 
         # API configuration
@@ -86,10 +86,10 @@ class HistoricalEventOddsExtractor:
         self, start_date: date = None, end_date: date = None
     ) -> Dict[str, str]:
         """
-        Get event IDs directly using SmartbettingLib - SUPER SIMPLE!
+        Get event IDs directly from EVENTS storage - optimized for Cloud Functions.
 
-        Uses the integrated method in SmartbettingLib for seamless event extraction.
-        Perfect for Cloud Run - no external dependencies, just one method call.
+        Reads directly from EVENTS and extracts IDs inline (fast & cost-effective).
+        No intermediate storage needed - saves on invocations and complexity.
 
         Args:
             start_date: Start date for event extraction (optional)
@@ -99,8 +99,8 @@ class HistoricalEventOddsExtractor:
             Dictionary mapping event ID to commence time
         """
         try:
-            # Use SmartbettingLib's integrated method - ONE simple call!
-            event_data = self.smartbetting.extract_event_ids_from_historical_data(
+            # Extract IDs directly from EVENTS - optimal for Cloud Functions
+            event_data = self.smartbetting.extract_event_ids_from_events_data(
                 bucket_name=str(self.bucket),
                 catalog=str(self.catalog),
                 table=str(self.input_table),
@@ -168,7 +168,7 @@ class HistoricalEventOddsExtractor:
                 regions=self.regions,
                 markets=markets_str,
                 odds_format=self.odds_format,
-                bookmakers="fanduel",  # -> Gets ALL available bookmakers
+                bookmakers="draftkings",  # -> Gets ALL available bookmakers
             )
 
             return odds_data
@@ -195,11 +195,8 @@ class HistoricalEventOddsExtractor:
         Returns:
             The GCS blob name where the file was saved
         """
-        # Create filename: raw_odds_historical_event_odds_{bookmaker}_{event_id}_{date}.json
-        date_str = historical_date.split("T")[0]  # Extract date part
-        filename = (
-            f"raw_{self.catalog}_{self.table}_{bookmakers}_{event_id}_{date_str}.json"
-        )
+        # Create filename: raw_odds_event_odds_{bookmaker}_{event_id}.json
+        filename = f"raw_{self.catalog}_event_odds_{bookmakers}_{event_id}.json"
         gcs_path = f"{self.catalog}/{self.table}/{self.season}/{bookmakers}/{filename}"
 
         try:
@@ -293,7 +290,9 @@ class HistoricalEventOddsExtractor:
                                     )
 
                     # Save to storage
-                    bookmaker_str = "fanduel"  # Since we're filtering to only fanduel
+                    bookmaker_str = (
+                        "draftkings"  # Since we're filtering to only fanduel
+                    )
                     saved_path = self.save_event_odds_to_storage(
                         event_id, odds_data, historical_date, bookmaker_str
                     )
@@ -356,8 +355,8 @@ def main():
     extractor = HistoricalEventOddsExtractor()
 
     # Simple configuration
-    start_date = date(2025, 4, 7)  # Can be None for all events
-    end_date = date(2025, 4, 10)  # Can be None for all events
+    start_date = date(2025, 10, 21)  # Can be None for all events
+    end_date = date(2025, 10, 26)  # Can be None for all events
     max_events = None  # Set to None for production
 
     print("🎯 SIMPLE HISTORICAL EVENT ODDS EXTRACTION")

@@ -88,7 +88,6 @@ consecutive_games AS (
         DATE_DIFF(game_date, LAG(game_date) OVER (PARTITION BY team_id ORDER BY game_date, game_id), DAY)
             AS days_between_games
     FROM all_team_games
-    WHERE game_date < '2025-04-07'
 ),
 
 -- Identify B2B games
@@ -109,7 +108,7 @@ next_games AS (
         true AS is_next_game
     FROM all_team_games
     WHERE
-        game_date >= '2025-04-07'
+        game_date >= CURRENT_DATE()
         AND game_id IN (
             -- Get the first game for each team on or after 2025-04-07
             SELECT
@@ -118,7 +117,7 @@ next_games AS (
                     ORDER BY game_date ASC, game_id ASC
                 ) AS first_game_id
             FROM all_team_games
-            WHERE game_date >= '2025-04-07'
+            WHERE game_date >= CURRENT_DATE()
         )
 ),
 

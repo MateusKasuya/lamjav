@@ -1,14 +1,17 @@
 """
-The Odds API NBA current Events data pipeline script.
+The Odds API NBA Current Events data pipeline script.
 
-This script fetches NBA upcoming events data from The Odds API and uploads it
+This script fetches ALL upcoming NBA events from The Odds API and uploads it
 to Google Cloud Storage in the landing layer of the data lake.
+
+This creates a snapshot of all open/upcoming events, regardless of when they occur.
+The file is overwritten on each execution with the latest snapshot.
 """
 
 import sys
 import os
 from typing import NoReturn
-from datetime import date, timedelta
+from datetime import datetime
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -23,9 +26,19 @@ def main() -> NoReturn:
     Main function to execute the The Odds API NBA current events data pipeline.
 
     This function:
-    1. Fetches upcoming/current events data from The Odds API
+    1. Fetches ALL upcoming/open events data from The Odds API (no date filters)
     2. Converts the data to NDJSON format
-    3. Uploads the data to Google Cloud Storage in the landing layer
+    3. Uploads the data to Google Cloud Storage with a standard filename
+
+    Note: This endpoint returns all future events regardless of when they occur.
+    The file is overwritten on each run to provide the latest snapshot.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If API key is not configured
+        Exception: For any other unexpected errors during execution
     """
     # Initialize constants
     bucket = Bucket.SMARTBETTING_STORAGE
@@ -33,68 +46,39 @@ def main() -> NoReturn:
     table = Table.EVENTS
     season = Season.SEASON_2025
 
-    # Define date window for file naming (allows backfilling if needed)
-    start_date = date(2025,10,21) #date.today()
-    end_date = date.today() + timedelta(days=1)
-
     # Initialize API clients
     theoddsapi = TheOddsAPILib()
     smartbetting = SmartbettingLib()
 
     try:
-        current_date = start_date
-        total_events_processed = 0
-        total_requests_made = 0
+        print("Starting current events pipeline - fetching ALL upcoming events")
 
-        print(f"Starting current events pipeline from {start_date} to {end_date}")
+        # Fetch ALL upcoming events (no date filters)
+        events = theoddsapi.get_events(
+            sport="basketball_nba",
+            date_format="iso",
+        )
 
-        while current_date <= end_date:
-            print(f"\nProcessing events snapshot for date: {current_date}")
+        if events is None:
+            print("No events data received from API")
+            raise Exception("Failed to fetch events data")
 
-            # Optional: window filter (from midnight to end of day)
-            commence_from = current_date.strftime("%Y-%m-%dT00:00:00Z")
-            commence_to = current_date.strftime("%Y-%m-%dT23:59:59Z")
+        if len(events) == 0:
+            print("No upcoming events found")
+            return
 
-            # Fetch events data
-            events = theoddsapi.get_events(
-                sport="basketball_nba",
-                date_format="iso",
-                commence_time_from=commence_from,
-                commence_time_to=commence_to,
-            )
+        print(f"Successfully fetched {len(events)} upcoming events")
 
-            if events is None:
-                print(f"No events data received for {current_date}")
-                current_date += timedelta(days=1)
-                continue
+        # Convert to NDJSON
+        ndjson_data = smartbetting.convert_to_ndjson(events)
 
-            if len(events) == 0:
-                print(f"No events found for {current_date}")
-                current_date += timedelta(days=1)
-                continue
+        # Upload NDJSON data to Google Cloud Storage with standard filename
+        gcs_blob_name = f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{datetime.now().strftime('%Y-%m-%d')}.json"
+        smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
 
-            # Convert to NDJSON
-            ndjson_data = smartbetting.convert_to_ndjson(events)
-
-            # Upload NDJSON data to Google Cloud Storage
-            gcs_blob_name = (
-                f"{catalog}/{table}/{season}/raw_{catalog}_{table}_{current_date.strftime('%Y-%m-%d')}.json"
-            )
-            smartbetting.upload_json_to_gcs(ndjson_data, bucket, gcs_blob_name)
-
-            print(
-                f"Successfully processed and uploaded {len(events)} events for {current_date}"
-            )
-            print(f"File saved as: {gcs_blob_name}")
-
-            total_events_processed += len(events)
-            total_requests_made += 1
-
-            current_date += timedelta(days=1)
-
-        print("\nPipeline completed!")
-        print(f"Total events processed: {total_events_processed}")
-        print(f"Total API requests made: {total_requests_made}")
+        print("Successfully uploaded events snapshot to GCS")
+        print(f"File saved as: {gcs_blob_name}")
+        print(f"Total events in snapshot: {len(events)}")
 
     except Exception as e:
         print(f"Error in current events data pipeline: {str(e)}")
@@ -103,5 +87,3 @@ def main() -> NoReturn:
 
 if __name__ == "__main__":
     main()
-
-

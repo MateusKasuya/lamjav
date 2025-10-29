@@ -9,6 +9,7 @@ sys.path.insert(0, current_dir)
 # Agora importar o active_players
 from injury_report_extractor import main
 
+
 @functions_framework.http
 def injury_report_extractor(request):
     """Injury Report Extractor Pipeline"""

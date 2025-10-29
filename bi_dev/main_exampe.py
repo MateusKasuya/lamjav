@@ -9,6 +9,7 @@ sys.path.insert(0, current_dir)
 # Agora importar o active_players
 from de_para_nba_injury_players import main
 
+
 @functions_framework.http
 def de_para_nba_injury_players(request):
     """De para Fuzzy String Match Pipeline"""

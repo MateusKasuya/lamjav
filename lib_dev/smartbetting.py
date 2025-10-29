@@ -38,13 +38,47 @@ class SmartbettingLib:
         print("Converting to JSON...")
         return json.dumps(data, indent=2)
 
-    def convert_to_ndjson(self, data: Union[List[dict], dict]) -> str:
+    def _normalize_numeric_types(self, obj: Any) -> Any:
+        """
+        Recursively normalize numeric types in nested structures.
+        Converts string representations of numbers to actual numeric types.
+
+        Args:
+            obj: Object to normalize (dict, list, or primitive type)
+
+        Returns:
+            Normalized object with numeric strings converted to float/int
+        """
+        if isinstance(obj, dict):
+            return {
+                key: self._normalize_numeric_types(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._normalize_numeric_types(item) for item in obj]
+        elif isinstance(obj, str):
+            # Try to convert string to number if it looks like a number
+            try:
+                # Check if it's an integer
+                if "." not in obj and "e" not in obj.lower():
+                    return int(obj)
+                # Otherwise try float
+                return float(obj)
+            except (ValueError, TypeError):
+                # Not a number, return as is
+                return obj
+        return obj
+
+    def convert_to_ndjson(
+        self, data: Union[List[dict], dict], normalize_numbers: bool = True
+    ) -> str:
         """
         Convert data to NEWLINE DELIMITED JSON format for BigQuery external tables.
 
         Args:
             data: Data to be converted to NDJSON. Can be a list of dictionaries
                   or a single dictionary.
+            normalize_numbers: If True, converts string representations of numbers
+                             to actual numeric types (recommended for BigQuery)
 
         Returns:
             NDJSON string representation of the data (one JSON object per line)
@@ -53,6 +87,11 @@ class SmartbettingLib:
             TypeError: If the data cannot be serialized to JSON
         """
         print("Converting to NDJSON...")
+
+        # Normalize numeric types if requested
+        if normalize_numbers:
+            data = self._normalize_numeric_types(data)
+
         if isinstance(data, list):
             return "\n".join(json.dumps(item) for item in data)
         else:
@@ -109,6 +148,47 @@ class SmartbettingLib:
         blob.upload_from_string(json_data, content_type="application/json")
         print("JSON uploaded to Google Cloud Storage!!!")
 
+    def delete_gcs_folder_contents(
+        self, bucket_name: Union[str, Any], prefix: str
+    ) -> int:
+        """
+        Delete all files in a GCS folder (prefix).
+
+        This function removes all blobs matching the given prefix, effectively
+        clearing a "folder" in GCS. Use this to clean up old data before
+        uploading fresh snapshots.
+
+        Args:
+            bucket_name: Name of the GCS bucket (can be enum or string)
+            prefix: The folder prefix/path to clear (e.g., "odds/events/season_2025/")
+
+        Returns:
+            int: Number of files deleted
+
+        Raises:
+            google.cloud.exceptions.GoogleCloudError: If there's an issue with GCP credentials
+            google.cloud.exceptions.NotFound: If the bucket doesn't exist
+        """
+        print(f"Deleting contents of GCS folder: {prefix}")
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(str(bucket_name))
+
+        # List all blobs with the prefix
+        blobs = list(bucket.list_blobs(prefix=prefix))
+
+        if not blobs:
+            print("No files found to delete")
+            return 0
+
+        # Delete all blobs
+        deleted_count = 0
+        for blob in blobs:
+            blob.delete()
+            deleted_count += 1
+
+        print(f"Successfully deleted {deleted_count} file(s)")
+        return deleted_count
+
     def upload_pdf_to_gcs(
         self, pdf_data: bytes, bucket_name: Union[str, Any], blob_name: Union[str, Any]
     ) -> bool:
@@ -134,7 +214,9 @@ class SmartbettingLib:
             blob = bucket.blob(str(blob_name))
 
             blob.upload_from_string(pdf_data, content_type="application/pdf")
-            print(f"PDF uploaded to Google Cloud Storage!!! Size: {len(pdf_data)} bytes")
+            print(
+                f"PDF uploaded to Google Cloud Storage!!! Size: {len(pdf_data)} bytes"
+            )
             return True
         except Exception as e:
             print(f"❌ Erro no upload para GCS: {str(e)}")
@@ -549,7 +631,9 @@ class SmartbettingLib:
             print(f"Error listing events files: {e}")
             return []
 
-    def read_events_file(self, bucket_name: str, file_name: str) -> List[Dict[str, Any]]:
+    def read_events_file(
+        self, bucket_name: str, file_name: str
+    ) -> List[Dict[str, Any]]:
         """
         Read a single events file (NDJSON) from GCS and parse it.
         """
@@ -570,6 +654,53 @@ class SmartbettingLib:
         except Exception as e:
             print(f"Error reading events file {file_name}: {e}")
             return []
+
+    def extract_date_from_filename(self, filename: str) -> Optional[str]:
+        """
+        Extract date string from a filename in format 'prefix_YYYY-MM-DD.json'.
+
+        Args:
+            filename: Full filename or path (e.g., 'odds/events/season_2025/raw_odds_events_2025-10-28.json')
+
+        Returns:
+            Date string in format YYYY-MM-DD if found, None otherwise
+        """
+        try:
+            # Extract just the filename if it's a full path
+            base_filename = filename.split("/")[-1]
+            # Remove .json extension and get the last part (date)
+            date_str = base_filename.replace(".json", "").split("_")[-1]
+            # Validate it's a proper date format
+            datetime.strptime(date_str, "%Y-%m-%d")
+            return date_str
+        except (ValueError, IndexError):
+            return None
+
+    def extract_event_ids_from_single_file(
+        self,
+        bucket_name: str,
+        file_name: str,
+    ) -> Dict[str, str]:
+        """
+        Extract event IDs and commence times from a single events file.
+
+        Args:
+            bucket_name: GCS bucket name
+            file_name: Full path to the events file in GCS
+
+        Returns:
+            Dictionary mapping event ID to commence time
+        """
+        event_data: Dict[str, str] = {}
+        events = self.read_events_file(bucket_name, file_name)
+
+        for event in events:
+            event_id = event.get("id")
+            commence_time = event.get("commence_time")
+            if event_id and commence_time:
+                event_data[event_id] = commence_time
+
+        return event_data
 
     def extract_event_ids_from_events_data(
         self,
@@ -627,26 +758,27 @@ class SmartbettingLib:
         catalog: str,
         table: str,
         season: str,
-        target_date: date = None,
+        date_suffix: Optional[str] = None,
     ) -> Optional[str]:
         """
         Save event IDs and commence times to GCS in a structured format.
-        
+
         Args:
             event_data: Dictionary mapping event ID to commence time
             bucket_name: GCS bucket name
             catalog: Data catalog (e.g., 'odds')
             table: Table name (e.g., 'event_id')
             season: Season identifier (e.g., 'season_2025')
-            target_date: Date for the extraction (defaults to today)
-            
+            date_suffix: Optional date string (YYYY-MM-DD) to append to filename
+
         Returns:
             GCS path if successful, None if failed
         """
-        if target_date is None:
-            target_date = date.today()
-
-        filename = f"raw_{catalog}_{table}_{target_date.strftime('%Y-%m-%d')}.json"
+        # Filename with optional date suffix
+        if date_suffix:
+            filename = f"raw_{catalog}_{table}_{date_suffix}.json"
+        else:
+            filename = f"raw_{catalog}_{table}.json"
         gcs_path = f"{catalog}/{table}/{season}/{filename}"
 
         try:
@@ -655,7 +787,7 @@ class SmartbettingLib:
             blob = bucket.blob(gcs_path)
 
             data = {
-                "extraction_date": target_date.isoformat(),
+                "extraction_date": date.today().isoformat(),
                 "total_events": len(event_data),
                 "events": [
                     {"id": event_id, "commence_time": commence_time}
@@ -679,6 +811,97 @@ class SmartbettingLib:
             print(f"❌ Error saving event data to storage: {e}")
             return None
 
+    def read_event_ids_from_storage(
+        self,
+        bucket_name: str,
+        catalog: str,
+        table: str,
+        season: str,
+        start_date: date = None,
+        end_date: date = None,
+    ) -> Dict[str, str]:
+        """
+        Read event IDs and commence times from storage.
+
+        This method reads from the EVENT_ID folder that was generated by
+        extract_current_event_ids.py and returns the event data.
+
+        Args:
+            bucket_name: GCS bucket name
+            catalog: Data catalog (e.g., 'odds')
+            table: Table name (e.g., 'event_id')
+            season: Season identifier (e.g., 'season_2025')
+            start_date: Optional start date filter (inclusive)
+            end_date: Optional end date filter (inclusive)
+
+        Returns:
+            Dictionary mapping event ID to commence time
+        """
+        print(f"🚀 Reading event IDs from storage ({catalog}/{table}/{season})...")
+
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+
+            # List all event_id files
+            prefix = f"{catalog}/{table}/{season}/"
+            blobs = bucket.list_blobs(prefix=prefix)
+
+            file_names = []
+            for blob in blobs:
+                if blob.name.endswith(".json"):
+                    file_names.append(blob.name)
+
+            if not file_names:
+                print("No event_id files found")
+                return {}
+
+            # Filter files by date if specified
+            if start_date or end_date:
+                filtered_files = []
+                for file_name in file_names:
+                    file_date_str = self.extract_date_from_filename(file_name)
+                    if file_date_str:
+                        try:
+                            file_date = datetime.strptime(
+                                file_date_str, "%Y-%m-%d"
+                            ).date()
+                            if start_date and file_date < start_date:
+                                continue
+                            if end_date and file_date > end_date:
+                                continue
+                            filtered_files.append(file_name)
+                        except ValueError:
+                            continue
+                file_names = filtered_files
+
+            # Read all event_id files
+            event_data: Dict[str, str] = {}
+            for file_name in file_names:
+                try:
+                    blob = bucket.blob(file_name)
+                    content = blob.download_as_text()
+                    data = json.loads(content)
+
+                    # Extract events from the structured format
+                    if "events" in data:
+                        for event in data["events"]:
+                            event_id = event.get("id")
+                            commence_time = event.get("commence_time")
+                            if event_id and commence_time:
+                                event_data[event_id] = commence_time
+
+                except Exception as e:
+                    print(f"⚠️  Error reading file {file_name}: {e}")
+                    continue
+
+            print(f"✅ Read {len(event_data)} event IDs from {len(file_names)} file(s)")
+            return event_data
+
+        except Exception as e:
+            print(f"❌ Error reading event IDs from storage: {e}")
+            return {}
+
     # ========================================================================================
     # INJURY REPORT PDF PROCESSING METHODS
     # ========================================================================================
@@ -701,7 +924,9 @@ class SmartbettingLib:
         bucket = storage_client.bucket(bucket_name)
 
         blobs = bucket.list_blobs(prefix=prefix)
-        all_pdf_files = [blob.name for blob in blobs if blob.name.lower().endswith(".pdf")]
+        all_pdf_files = [
+            blob.name for blob in blobs if blob.name.lower().endswith(".pdf")
+        ]
 
         if target_dates:
             # Filtrar por múltiplas datas
@@ -721,7 +946,9 @@ class SmartbettingLib:
 
         return date_filtered_files
 
-    def download_pdf_from_gcs(self, bucket_name: str, blob_name: str, local_path: str) -> bool:
+    def download_pdf_from_gcs(
+        self, bucket_name: str, blob_name: str, local_path: str
+    ) -> bool:
         """
         Baixa um arquivo PDF do GCS para um arquivo local temporário.
 
@@ -785,7 +1012,9 @@ class SmartbettingLib:
                 print("🎯 Processando todos os PDFs disponíveis")
 
             # 1. Listar arquivos PDF no GCS
-            all_pdf_files = self.list_pdf_files_in_gcs(bucket_name, pdf_prefix, target_dates)
+            all_pdf_files = self.list_pdf_files_in_gcs(
+                bucket_name, pdf_prefix, target_dates
+            )
 
             if not all_pdf_files:
                 print("✅ Nenhum arquivo encontrado para processar")
@@ -809,7 +1038,9 @@ class SmartbettingLib:
                 print(f"[{i}/{len(all_pdf_files)}] {filename}", end="")
 
                 # Criar arquivo temporário
-                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".pdf", delete=False
+                ) as temp_file:
                     temp_path = temp_file.name
 
                 try:
@@ -833,7 +1064,9 @@ class SmartbettingLib:
                             # Verificar se coluna current_status está presente
                             if "current_status" in df.columns:
                                 status_found = df["current_status"].value_counts()
-                                print(f" 🔍 Status detectados: {len(status_found)} tipos diferentes")
+                                print(
+                                    f" 🔍 Status detectados: {len(status_found)} tipos diferentes"
+                                )
                             else:
                                 print(" ⚠️ Coluna 'current_status' não encontrada!")
 
@@ -869,7 +1102,9 @@ class SmartbettingLib:
             total_processed = 0
 
             if all_dataframes:
-                print(f"\n📤 Consolidando e inserindo {len(all_dataframes)} PDFs no BigQuery...")
+                print(
+                    f"\n📤 Consolidando e inserindo {len(all_dataframes)} PDFs no BigQuery..."
+                )
 
                 try:
                     # Consolidar todos os DataFrames
@@ -889,7 +1124,9 @@ class SmartbettingLib:
                     )
 
                     total_processed = len(all_dataframes)
-                    print(f"✅ BigQuery: {total_processed} PDFs → {total_rows} registros inseridos")
+                    print(
+                        f"✅ BigQuery: {total_processed} PDFs → {total_rows} registros inseridos"
+                    )
 
                     # Limpeza total da memória
                     del combined_df
@@ -902,7 +1139,9 @@ class SmartbettingLib:
 
             # 4. Resumo final
             total_errors = sum(error_stats.values())
-            success_rate = (total_processed / len(all_pdf_files)) * 100 if all_pdf_files else 0
+            success_rate = (
+                (total_processed / len(all_pdf_files)) * 100 if all_pdf_files else 0
+            )
 
             print("\n📊 RESUMO FINAL")
             print("=" * 50)

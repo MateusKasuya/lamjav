@@ -26,3 +26,4 @@ cleaned_data AS (
 )
 
 SELECT * FROM cleaned_data
+QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name ORDER BY injury_report_date DESC, loaded_at DESC) = 1

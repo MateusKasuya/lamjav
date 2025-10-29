@@ -10,8 +10,8 @@ WITH historical_event_odds AS (
         player_name,
         market_key,
         line
-    FROM {{ ref('stg_historical_event_odds') }}
-    QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name, market_key ORDER BY snapshot_timestamp DESC) = 1
+    FROM {{ ref('stg_event_odds') }}
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY player_name, market_key ORDER BY commence_time DESC) = 1
 ),
 
 -- Get game player stats with game_number_group from staging
@@ -40,7 +40,6 @@ game_player_stats_with_groups AS (
     FROM {{ ref('stg_game_player_stats') }}
     WHERE
         minutes > 0
-        AND game_date < '2025-04-07'
 ),
 
 -- Unpivot stats with game_number_group
