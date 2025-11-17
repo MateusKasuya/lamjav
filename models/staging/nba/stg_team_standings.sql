@@ -9,6 +9,10 @@ WITH source_data AS (
 cleaned_data AS (
     SELECT
         team.id AS team_id,
+        team.full_name AS team_name,
+        team.abbreviation AS team_abbreviation,
+        team.conference,
+        team.city AS team_city,
         season,
         conference_rank,
         CAST(wins AS INT64) AS wins,

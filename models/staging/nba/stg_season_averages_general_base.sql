@@ -12,8 +12,8 @@ cleaned_data AS (
         player.id AS player_id,
 
         -- Basic statistics
-        CAST(stats.gp AS INTEGER) AS games_played,
-        CAST(stats.min AS FLOAT64) AS minutes,
+        --CAST(stats.gp AS INTEGER) AS games_played,
+        --CAST(stats.min AS FLOAT64) AS minutes,
         CAST(stats.pts AS FLOAT64) AS points,
         CAST(stats.reb AS FLOAT64) AS rebounds,
         CAST(stats.pts AS FLOAT64) + CAST(stats.reb AS FLOAT64) AS points_rebounds,

@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_injury_report
+    description: "Staging table for NBA injury reports. Contains current injury status for players, extracted from official injury reports. Only includes players with active injury designations (Doubtful, Questionable, Out). Deduplicated to show the most recent status per player."
+    columns:
+      - name: current_status
+        description: "Current injury status of the player. Possible values: 'Doubtful', 'Questionable', 'Out'"
+      - name: player_name
+        description: "Name of the injured player as it appears in the injury report"
+      - name: injury_report_date
+        description: "Date when the injury report was published (extracted from source file name)"
+      - name: injury_report_time
+        description: "Time when the injury report was published (e.g., 06PM, extracted from source file name)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+

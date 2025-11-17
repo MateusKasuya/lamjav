@@ -8,12 +8,12 @@ WITH source_data AS (
 
 cleaned_data AS (
     SELECT
-        id,
+        id AS player_id,
         team.id AS team_id,
         team.full_name AS team_name,
         team.abbreviation AS team_abbreviation,
-        TRIM(first_name || ' ' || last_name) AS name,
-        CONCAT(TRIM(last_name || ', ' || first_name), ' (', team.abbreviation, ')') AS last_name_first_team,
+        TRIM(first_name || ' ' || last_name) AS player_name,
+        --CONCAT(TRIM(last_name || ', ' || first_name), ' (', team.abbreviation, ')') AS last_name_first_team,
         TRIM(position) AS position,
         CURRENT_TIMESTAMP() AS loaded_at
     FROM source_data

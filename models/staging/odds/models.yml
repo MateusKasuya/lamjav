@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_event_odds
+    description: "Staging table for current NBA player prop betting odds. Contains betting lines from various bookmakers for player performance markets (points, rebounds, assists, etc.). Data is flattened from nested JSON structure and deduplicated to show the most recent line per player per market."
+    columns:
+      - name: event_id
+        description: "Unique identifier for the betting event (game)"
+      - name: commence_time
+        description: "Scheduled start time of the game"
+      - name: market_key
+        description: "Type of betting market (e.g., player_points, player_rebounds, player_assists, player_threes, player_blocks_steals, player_double_double, player_triple_double)"
+      - name: bookmaker_key
+        description: "Identifier for the bookmaker providing the odds"
+      - name: line
+        description: "Betting line value (Over/Under threshold). For double_double and triple_double markets, set to 1"
+      - name: extraction_timestamp
+        description: "Timestamp when the odds data was extracted from the API"
+      - name: player_name
+        description: "Name of the player the prop bet is for (cleaned/trimmed)"
+      - name: player_name_home_team
+        description: "Player name with home team abbreviation in parentheses (e.g., 'LeBron James (LAL)')"
+      - name: player_name_away_team
+        description: "Player name with away team abbreviation in parentheses (e.g., 'LeBron James (LAL)')"
+
+

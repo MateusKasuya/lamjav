@@ -1,5 +1,5 @@
 {{ config(
-    description='Intermediate model that unpivots game player stats - maintains base structure with unpivoted stat columns'
+    description='Intermediate model that pilled game player stats'
 ) }}
 
 WITH base_data AS (
@@ -8,8 +8,8 @@ WITH base_data AS (
         minutes > 0
 ),
 
--- Unpivot the specified stats into long format
-stats_unpivoted AS (
+-- Pilled the specified stats
+stats_pilled AS (
     SELECT
         player_id,
         team_id,
@@ -175,6 +175,18 @@ stats_unpivoted AS (
         'player_triple_double' AS stat_type,
         CAST(triple_double AS FLOAT64) AS stat_value
     FROM base_data
+
+    UNION ALL
+
+    SELECT
+        player_id,
+        team_id,
+        game_id,
+        game_number,
+        game_date,
+        'player_minutes' AS stat_type,
+        CAST(minutes AS FLOAT64) AS stat_value
+    FROM base_data
 )
 
 SELECT
@@ -186,4 +198,4 @@ SELECT
     stat_type,
     stat_value,
     CURRENT_TIMESTAMP() AS loaded_at
-FROM stats_unpivoted
+FROM stats_pilled

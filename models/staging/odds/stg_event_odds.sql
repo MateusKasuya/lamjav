@@ -24,7 +24,7 @@ final AS (
         END AS line,
 
         -- Team abbreviation mapping (convert full team names to abbreviations)
-        CASE
+        /*CASE
             WHEN home_team = 'Atlanta Hawks' THEN 'ATL'
             WHEN home_team = 'Boston Celtics' THEN 'BOS'
             WHEN home_team = 'Brooklyn Nets' THEN 'BKN'
@@ -90,7 +90,7 @@ final AS (
             WHEN away_team = 'Utah Jazz' THEN 'UTA'
             WHEN away_team = 'Washington Wizards' THEN 'WAS'
             ELSE 'UNK'
-        END AS away_team_abbr,
+        END AS away_team_abbr,*/
 
         -- Metadata
         current_timestamp() AS extraction_timestamp
@@ -109,8 +109,8 @@ SELECT
     bookmaker_key,
     line,
     extraction_timestamp,
-    trim(player_name) AS player_name,
-    trim(player_name || ' (' || home_team_abbr || ')') AS player_name_home_team,
-    trim(player_name || ' (' || away_team_abbr || ')') AS player_name_away_team
+    trim(player_name) AS player_name
+    --trim(player_name || ' (' || home_team_abbr || ')') AS player_name_home_team,
+    --trim(player_name || ' (' || away_team_abbr || ')') AS player_name_away_team
 FROM final
 QUALIFY row_number() OVER (PARTITION BY player_name, market_key ORDER BY commence_time DESC) = 1

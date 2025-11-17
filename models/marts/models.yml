@@ -1,0 +1,150 @@
+version: 2
+
+models:
+  - name: dim_players
+    description: "Dimension table for NBA players. Provides a comprehensive view of active players including their team information, age, injury status, and last game played. This is the main reference table for player analysis."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        description: "Full name of the player"
+      - name: position
+        description: "Player's position (e.g., G, F, C, G-F, F-C)"
+      - name: team_id
+        description: "Unique identifier for the player's current team"
+      - name: team_name
+        description: "Full name of the player's current team"
+      - name: team_abbreviation
+        description: "Three-letter abbreviation of the player's team"
+      - name: age
+        description: "Player's age"
+      - name: last_game_text
+        description: "Descriptive text showing days since player's last game (e.g., 'Ultimo Jogo: 3 dias atras')"
+      - name: current_status
+        description: "Current injury status if applicable (Doubtful, Questionable, Out, or NULL if healthy)"
+
+  - name: dim_prop_player
+    description: "Dimension table for NBA player prop betting analysis. Provides comprehensive player statistics with injury impact analysis, team rankings, and backup player performance when leaders are injured. Includes z-scores and rating stars for each statistic within team context."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - player_id
+            - stat_type
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: team_id
+        description: "Unique identifier for the player's team"
+      - name: stat_type
+        description: "Type of statistic being analyzed"
+      - name: stat_value
+        description: "Average value of the statistic for this player"
+      - name: stat_rank
+        description: "Player's rank within their team for this statistic (1 = best)"
+      - name: team_avg_stat
+        description: "Team average for this statistic"
+      - name: team_stddev_stat
+        description: "Team standard deviation for this statistic"
+      - name: zscore
+        description: "Z-score indicating how many standard deviations above/below team average the player performs"
+      - name: rating_stars
+        description: "Star rating based on z-score: 3 stars (>1.67), 2 stars (>=1), 1 star (>=0), 0 stars (<0)"
+      - name: current_status
+        description: "Current injury status of the player"
+      - name: is_leader_with_injury
+        description: "Boolean flag indicating if this player is the team leader (rank 1) for this stat and has an injury"
+      - name: is_available_backup
+        description: "Boolean flag indicating if this player is an available backup (rank > 1 and no injury)"
+      - name: next_available_player_name
+        description: "Name of the next available backup player for this stat (shown when leader is injured)"
+      - name: next_player_stats_when_leader_out
+        description: "Average performance of the backup player when this leader is out (only shown if current player is injured leader)"
+      - name: next_player_stats_normal
+        description: "Normal average performance of the backup player"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
+
+  - name: dim_teams
+    description: "Dimension table for NBA teams. Provides comprehensive team information including standings, recent performance, ratings, and next opponent details. Useful for analyzing team context and matchup strength."
+    columns:
+      - name: team_id
+        description: "Unique identifier for the team"
+        tests:
+          - not_null
+          - unique
+      - name: team_name
+        description: "Full name of the team"
+      - name: team_abbreviation
+        description: "Three-letter abbreviation for the team"
+      - name: conference
+        description: "Conference the team belongs to (Eastern or Western)"
+      - name: team_city
+        description: "City where the team is located"
+      - name: season
+        description: "Season year"
+      - name: conference_rank
+        description: "Team's rank within their conference"
+      - name: wins
+        description: "Number of wins in the season"
+      - name: losses
+        description: "Number of losses in the season"
+      - name: team_last_five_games
+        description: "Results of last 5 games (e.g., 'V D V V D')"
+      - name: team_rating_rank
+        description: "Overall team rating rank (based on net rating: offensive - defensive)"
+      - name: team_offensive_rating_rank
+        description: "Team's rank for offensive rating"
+      - name: team_defensive_rating_rank
+        description: "Team's rank for defensive rating"
+      - name: next_opponent_id
+        description: "Team ID of the next opponent"
+      - name: next_opponent_name
+        description: "Full name of the next opponent"
+      - name: next_opponent_abbreviation
+        description: "Three-letter abbreviation of the next opponent"
+      - name: next_opponent_team_last_five_games
+        description: "Next opponent's results from last 5 games"
+      - name: next_opponent_conference_rank
+        description: "Next opponent's conference rank"
+      - name: next_opponent_team_rating_rank
+        description: "Next opponent's overall rating rank"
+      - name: next_opponent_team_offensive_rating_rank
+        description: "Next opponent's offensive rating rank"
+      - name: next_opponent_team_defensive_rating_rank
+        description: "Next opponent's defensive rating rank"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
+
+  - name: ft_game_player_stats
+    description: "Fact table for NBA player prop betting performance vs betting lines. Shows historical performance of players against betting lines for each statistic, including game context (home/away, opponent, back-to-back). This is the primary table for analyzing Over/Under betting outcomes."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - player_id
+            - game_id
+            - stat_type
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: game_date
+        description: "Date when the game was played"
+      - name: game_id
+        description: "Unique identifier for the game"
+      - name: stat_type
+        description: "Type of statistic (e.g., player_points, player_rebounds, player_assists)"
+      - name: stat_value
+        description: "Actual value achieved by the player in the game"
+      - name: line
+        description: "Betting line (Over/Under threshold) for this stat"
+      - name: is_b2b_game
+        description: "Boolean flag indicating if this was a back-to-back game for the player's team"
+      - name: stat_vs_line
+        description: "Result vs betting line: 'over' (stat_value >= line), 'under' (stat_value < line), or NULL (no line available)"
+      - name: played_against
+        description: "Opponent team abbreviation. Prefixed with '@' if playing away (e.g., '@LAL' or 'BOS')"
+      - name: home_away
+        description: "Location of game from player's perspective: 'Casa' (Home) or 'Fora' (Away)"
+

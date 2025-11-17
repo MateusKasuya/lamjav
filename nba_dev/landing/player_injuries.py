@@ -38,7 +38,7 @@ def main() -> NoReturn:
     bucket = Bucket.SMARTBETTING_STORAGE
     catalog = Catalog.NBA
     table = Table.PLAYER_INJURIES
-    season = Season.SEASON_2024
+    season = Season.SEASON_2025
 
     # Initialize API clients
     balldontlie = BalldontlieLib()

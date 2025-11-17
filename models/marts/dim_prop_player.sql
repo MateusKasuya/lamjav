@@ -6,43 +6,6 @@
 }}
 
 WITH
--- Latest odds data
-latest_odds AS (
-    SELECT
-        player_name,
-        market_key,
-        line
-    FROM {{ ref('stg_event_odds') }}
-    QUALIFY ROW_NUMBER() OVER (
-        PARTITION BY player_name, market_key
-        ORDER BY commence_time DESC
-    ) = 1
-),
-
--- Games where players didn't play (injury periods)
--- Note: This identifies games where players had 0 minutes, which could indicate injury
-injury_games AS (
-    SELECT DISTINCT
-        player_id,
-        team_id,
-        game_id
-    FROM {{ ref('stg_game_player_stats') }}
-    WHERE minutes = 0
-),
-
--- Alternative: Use injury report data to identify injured players
-injured_players_from_report AS (
-    SELECT DISTINCT
-        dpp.nba_player_id AS player_id,
-        ap.team_id,
-        ir.current_status
-    FROM {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
-    INNER JOIN {{ ref('stg_injury_report') }} AS ir
-        ON dpp.injury_player_name = ir.player_name
-    INNER JOIN {{ ref('stg_active_players') }} AS ap
-        ON dpp.nba_player_id = ap.id
-    WHERE ir.current_status IN ('Out', 'Doubtful', 'Questionable')
-),
 
 -- Performance of backup players when specific leaders are injured
 backup_performance_when_leader_injured AS (
@@ -52,12 +15,12 @@ backup_performance_when_leader_injured AS (
         gps.stat_type,
         backup_player.player_id AS backup_player_id,
         AVG(backup_player.stat_value) AS backup_stats_when_leader_out
-    FROM injury_games AS ipr
-    INNER JOIN {{ ref('int_game_player_stats') }} AS gps
+    FROM {{ ref('int_game_player_stats_not_played') }} AS ipr
+    INNER JOIN {{ ref('int_game_player_stats_pilled') }} AS gps
         ON
             ipr.player_id = gps.player_id
             AND ipr.team_id = gps.team_id
-    INNER JOIN {{ ref('int_game_player_stats') }} AS backup_player
+    INNER JOIN {{ ref('int_game_player_stats_pilled') }} AS backup_player
         ON
             ipr.team_id = backup_player.team_id
             AND gps.game_id = backup_player.game_id
@@ -73,27 +36,22 @@ backup_performance_when_leader_injured AS (
 -- Normal performance of backup players (all games, not just when no leader is injured)
 backup_performance_normal AS (
     SELECT
-        gps.player_id,
-        gps.team_id,
-        gps.stat_type,
-        AVG(gps.stat_value) AS backup_stats_normal
-    FROM {{ ref('int_game_player_stats') }} AS gps
-    -- Note: int_game_player_stats already filters for minutes > 0 in its base_data CTE
-    GROUP BY gps.player_id, gps.team_id, gps.stat_type
+        s.player_id,
+        p.team_id,
+        s.stat_type,
+        s.stat_value AS backup_stats_normal
+    FROM {{ ref('int_season_averages_general_base') }} AS s
+    LEFT JOIN {{ ref('stg_active_players') }} AS p
+        ON s.player_id = p.player_id
 ),
 
 -- Base player statistics with odds and rankings
 player_base_stats AS (
     SELECT
-        p.id AS player_id,
+        p.player_id,
         p.team_id,
         s.stat_type,
         s.stat_value,
-        o.line,
-        CASE
-            WHEN o.market_key IN ('player_double_double', 'player_triple_double') THEN null
-            ELSE s.stat_value - o.line
-        END AS delta,
         ROW_NUMBER() OVER (
             PARTITION BY p.team_id, s.stat_type
             ORDER BY s.stat_value DESC
@@ -102,13 +60,7 @@ player_base_stats AS (
         STDDEV(s.stat_value) OVER (PARTITION BY p.team_id, s.stat_type) AS team_stddev_stat
     FROM {{ ref('stg_active_players') }} AS p
     LEFT JOIN {{ ref('int_season_averages_general_base') }} AS s
-        ON p.id = s.player_id
-    LEFT JOIN {{ source('bi_dev', 'de_para_nba_odds_players') }} AS de_para
-        ON p.id = de_para.nba_player_id
-    LEFT JOIN latest_odds AS o
-        ON
-            de_para.odds_player_name = o.player_name
-            AND s.stat_type = o.market_key
+        ON p.player_id = s.player_id
 ),
 
 -- Calculate z-scores and ratings
@@ -134,7 +86,7 @@ players_with_injury_status AS (
         pr.*,
         ir.current_status,
         COALESCE(pr.stat_rank = 1 AND ir.current_status IS NOT null, false) AS is_leader_with_injury,
-        COALESCE(pr.stat_rank > 1, false) AS is_available_backup
+        COALESCE(pr.stat_rank > 1, false OR ir.current_status IS null, false) AS is_available_backup
     FROM player_ratings AS pr
     LEFT JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
         ON pr.player_id = dpp.nba_player_id
@@ -149,7 +101,7 @@ next_available_players AS (
         leader.stat_type,
         leader.player_id AS current_leader_id,
         backup.player_id AS next_available_player_id,
-        p.name AS next_available_player_name,
+        p.player_name AS next_available_player_name,
         COALESCE(bpwi.backup_stats_when_leader_out, 0) AS next_player_stats_when_leader_out,
         COALESCE(bpn.backup_stats_normal, 0) AS next_player_stats_normal
     FROM players_with_injury_status AS leader
@@ -159,7 +111,7 @@ next_available_players AS (
             AND leader.stat_type = backup.stat_type
             AND backup.is_available_backup = true
     LEFT JOIN {{ ref('stg_active_players') }} AS p
-        ON backup.player_id = p.id
+        ON backup.player_id = p.player_id
     LEFT JOIN backup_performance_when_leader_injured AS bpwi
         ON
             leader.player_id = bpwi.injured_leader_id
@@ -171,7 +123,7 @@ next_available_players AS (
             backup.team_id = bpn.team_id
             AND backup.player_id = bpn.player_id
             AND backup.stat_type = bpn.stat_type
-    WHERE leader.stat_rank = 1  -- Always show next player for the current leader
+    WHERE leader.is_leader_with_injury = true -- Always show next player for the current leader
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY leader.team_id, leader.stat_type
         ORDER BY backup.stat_rank
@@ -184,10 +136,10 @@ SELECT
     player_id,
     team_id,
     stat_type,
-    stat_value,
-    line,
-    delta,
     rating_stars,
+    is_leader_with_injury,
+    is_available_backup,
+    stat_rank,
     next_available_player_name,
     next_player_stats_when_leader_out,
     next_player_stats_normal,

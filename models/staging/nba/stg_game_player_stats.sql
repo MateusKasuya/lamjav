@@ -59,14 +59,9 @@ cleaned_data AS (
 
 SELECT
     *,
-    CASE
-        WHEN game_number <= 5 THEN 'L5'
-        WHEN game_number <= 10 THEN 'L10'
-        WHEN game_number <= 30 THEN 'L30'
-    END AS game_number_group,
-    CASE
+    /*CASE
         WHEN winner_team_id = team_id THEN 'V'
         WHEN winner_team_id != team_id THEN 'D'
-    END AS win_loss,
+    END AS win_loss,*/
     CURRENT_TIMESTAMP() AS loaded_at
 FROM cleaned_data

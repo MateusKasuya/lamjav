@@ -9,6 +9,7 @@ from thefuzz import fuzz
 from thefuzz import process
 import pandas as pd
 from google.cloud import bigquery
+from datetime import datetime
 
 
 class FuzzyStringMatch:
@@ -161,6 +162,8 @@ class FuzzyStringMatch:
 
         result_df = pd.DataFrame(matches)
 
+        result_df["extraction_timestamp"] = datetime.now()
+
         # Sort by similarity score descending
         result_df = result_df.sort_values("similarity_score", ascending=False)
 
@@ -271,6 +274,8 @@ class FuzzyStringMatch:
             matches.append(match_record)
 
         result_df = pd.DataFrame(matches)
+
+        result_df["extraction_timestamp"] = datetime.now()
 
         # Remove duplicates based on odds_player_name, keeping the best match
         result_df = result_df.sort_values("similarity_score", ascending=False)

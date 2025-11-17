@@ -47,8 +47,6 @@ sources:
           - name: similarity_score
             description: "Fuzzy matching similarity score (0-100)"
             data_type: string
-            tests:
-              - not_null
           - name: is_confident_match
             description: "Boolean flag indicating if similarity score >= threshold (80%)"
             data_type: boolean

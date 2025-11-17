@@ -1,0 +1,197 @@
+version: 2
+
+models:
+  - name: stg_active_players
+    description: "Staging table for NBA active players. Contains current roster information including player names, positions, and team assignments."
+    columns:
+      - name: player_id
+        description: "Unique identifier for each NBA player"
+      - name: team_id
+        description: "Unique identifier for the player's current team"
+      - name: team_name
+        description: "Full name of the player's current team"
+      - name: team_abbreviation
+        description: "Three-letter abbreviation of the player's team"
+      - name: player_name
+        description: "Full name of the player (First Last format)"
+      - name: last_name_first_team
+        description: "Player name in Last, First (TEAM) format for display purposes"
+      - name: position
+        description: "Player's position (e.g., G, F, C, G-F, F-C)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
+  - name: stg_game_player_stats
+    description: "Staging table for individual player statistics from each NBA game. Contains detailed performance metrics for every player in every game they participated in."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: team_id
+        description: "Unique identifier for the player's team in this game"
+      - name: game_id
+        description: "Unique identifier for the game"
+      - name: game_date
+        description: "Date when the game was played"
+      - name: home_team_score
+        description: "Final score of the home team"
+      - name: home_team_id
+        description: "Unique identifier for the home team"
+      - name: visitor_team_score
+        description: "Final score of the visiting team"
+      - name: visitor_team_id
+        description: "Unique identifier for the visiting team"
+      - name: points
+        description: "Points scored by the player"
+      - name: minutes
+        description: "Minutes played by the player"
+      - name: threes
+        description: "Three-point field goals made by the player"
+      - name: rebounds
+        description: "Total rebounds (offensive + defensive) by the player"
+      - name: points_rebounds
+        description: "Combined points and rebounds (calculated field)"
+      - name: assists
+        description: "Assists by the player"
+      - name: points_assists
+        description: "Combined points and assists (calculated field)"
+      - name: rebounds_assists
+        description: "Combined rebounds and assists (calculated field)"
+      - name: points_rebounds_assists
+        description: "Combined points, rebounds, and assists (calculated field)"
+      - name: steals
+        description: "Steals by the player"
+      - name: blocks
+        description: "Blocks by the player"
+      - name: blocks_steals
+        description: "Combined blocks and steals (calculated field)"
+      - name: turnovers
+        description: "Turnovers by the player"
+      - name: triple_double
+        description: "Binary indicator (1/0) if player achieved a triple-double (10+ in 3 categories)"
+      - name: double_double
+        description: "Binary indicator (1/0) if player achieved a double-double (10+ in 2 categories)"
+      - name: winner_team_id
+        description: "Team ID of the winning team"
+      - name: game_number
+        description: "Sequential game number for the player (1 = most recent game)"
+      - name: game_number_group
+        description: "Categorizes games into groups: L5 (last 5), L10 (last 10), L30 (last 30)"
+      - name: win_loss
+        description: "Game result for the player's team: V (Victory) or D (Defeat)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
+  - name: stg_games
+    description: "Staging table for NBA games. Contains game-level information including teams, scores, and game status."
+    columns:
+      - name: game_id
+        description: "Unique identifier for the game"
+      - name: game_date
+        description: "Date when the game was/will be played"
+      - name: game_status
+        description: "Current status of the game (e.g., Final, Scheduled, In Progress)"
+      - name: home_team_id
+        description: "Unique identifier for the home team"
+      - name: home_team_name
+        description: "Full name of the home team"
+      - name: home_team_abbreviation
+        description: "Three-letter abbreviation for the home team"
+      - name: home_team_score
+        description: "Final score of the home team (null for future games)"
+      - name: visitor_team_id
+        description: "Unique identifier for the visiting team"
+      - name: visitor_team_name
+        description: "Full name of the visiting team"
+      - name: visitor_team_abbreviation
+        description: "Three-letter abbreviation for the visiting team"
+      - name: visitor_team_score
+        description: "Final score of the visiting team (null for future games)"
+      - name: winner_team_id
+        description: "Team ID of the winning team (null for future games or ties)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
+  - name: stg_season_averages_general_base
+    description: "Staging table for NBA player season averages (base statistics). Contains per-game averages for fundamental basketball statistics."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: games_played
+        description: "Number of games played in the season"
+      - name: minutes
+        description: "Average minutes per game"
+      - name: points
+        description: "Average points per game"
+      - name: rebounds
+        description: "Average rebounds per game"
+      - name: points_rebounds
+        description: "Average combined points and rebounds per game"
+      - name: assists
+        description: "Average assists per game"
+      - name: points_assists
+        description: "Average combined points and assists per game"
+      - name: rebounds_assists
+        description: "Average combined rebounds and assists per game"
+      - name: points_rebounds_assists
+        description: "Average combined points, rebounds, and assists per game"
+      - name: steals
+        description: "Average steals per game"
+      - name: blocks
+        description: "Average blocks per game"
+      - name: blocks_steals
+        description: "Average combined blocks and steals per game"
+      - name: turnovers
+        description: "Average turnovers per game"
+      - name: three_pointers_made
+        description: "Average three-pointers made per game"
+      - name: double_doubles
+        description: "Total number of double-doubles in the season"
+      - name: triple_doubles
+        description: "Total number of triple-doubles in the season"
+      - name: age
+        description: "Player's age"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
+  - name: stg_season_averages_general_advanced
+    description: "Staging table for NBA player season averages (advanced statistics). Contains advanced metrics like offensive and defensive ratings."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: possessions
+        description: "Number of possessions the player was involved in"
+      - name: offensive_rating
+        description: "Points produced per 100 possessions (efficiency metric)"
+      - name: defensive_rating
+        description: "Points allowed per 100 possessions (efficiency metric)"
+      - name: offensive_rating_points
+        description: "Total offensive rating points (possessions * offensive_rating)"
+      - name: defensive_rating_points
+        description: "Total defensive rating points (possessions * defensive_rating)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
+  - name: stg_team_standings
+    description: "Staging table for NBA team standings. Contains current season standings, records, and conference information."
+    columns:
+      - name: team_id
+        description: "Unique identifier for the team"
+      - name: team_name
+        description: "Full name of the team"
+      - name: team_abbreviation
+        description: "Three-letter abbreviation for the team"
+      - name: conference
+        description: "Conference the team belongs to (Eastern or Western)"
+      - name: team_city
+        description: "City where the team is located"
+      - name: season
+        description: "Season year"
+      - name: conference_rank
+        description: "Team's rank within their conference"
+      - name: wins
+        description: "Number of wins in the season"
+      - name: losses
+        description: "Number of losses in the season"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
