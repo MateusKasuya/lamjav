@@ -68,7 +68,7 @@ models:
         description: "Timestamp when the record was loaded"
 
   - name: dim_teams
-    description: "Dimension table for NBA teams. Provides comprehensive team information including standings, recent performance, ratings, and next opponent details. Useful for analyzing team context and matchup strength."
+    description: "Dimension table for NBA teams. Provides comprehensive team information including standings, recent performance, ratings, next opponent details, and injury report release times in Brasília timezone."
     columns:
       - name: team_id
         description: "Unique identifier for the team"
@@ -105,6 +105,8 @@ models:
         description: "Full name of the next opponent"
       - name: next_opponent_abbreviation
         description: "Three-letter abbreviation of the next opponent"
+      - name: is_next_game_home
+        description: "Boolean flag indicating if the next game is at home (true) or away (false)"
       - name: next_opponent_team_last_five_games
         description: "Next opponent's results from last 5 games"
       - name: next_opponent_conference_rank
@@ -115,6 +117,10 @@ models:
         description: "Next opponent's offensive rating rank"
       - name: next_opponent_team_defensive_rating_rank
         description: "Next opponent's defensive rating rank"
+      - name: team_injury_report_time_brasilia
+        description: "Time when injury report is released for the team's home games in Brasília timezone (13:30 local time converted). Example: Los Angeles = 17:30 (13:30 PT + 4 hours during DST)"
+      - name: next_game_injury_report_time_brasilia
+        description: "Time when injury report is released for the next game in Brasília timezone. Based on the home team's city (where the game is played). If playing at home, same as team_injury_report_time_brasilia; if away, uses opponent's city time"
       - name: loaded_at
         description: "Timestamp when the record was loaded"
 

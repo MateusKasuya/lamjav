@@ -192,6 +192,12 @@ models:
         description: "Number of wins in the season"
       - name: losses
         description: "Number of losses in the season"
+      - name: is_dst
+        description: "Boolean flag indicating if current date is in US Daylight Saving Time period (second Sunday of March to first Sunday of November)"
+      - name: injury_report_time_offset_hours
+        description: "Hours to add to 13:30 local time to convert to Brasília time for injury report release. Accounts for US DST rules (except Arizona which doesn't observe DST)"
+      - name: team_injury_report_time_brasilia
+        description: "Time when injury report is released for the team's home games in Brasília timezone (13:30 local time converted). Example: Los Angeles = 17:30 (13:30 PT + 4 hours during DST)"
       - name: loaded_at
         description: "Timestamp when the record was loaded into the staging table"
 
