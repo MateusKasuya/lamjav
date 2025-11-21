@@ -7,6 +7,14 @@
 -- Each file represents odds for a specific event at the time of extraction
 -- Filename pattern: raw_odds_event_odds_draftkings_{event_id}.json
 
+-- ============================================================================
+-- AMBIENTE: Este script é apenas para referência/documentação
+-- O DBT cria as external tables automaticamente via sources.yml usando o
+-- projeto configurado na variável de ambiente DBT_PROJECT:
+-- - DEV: sigma-heuristic-469419-h3
+-- - PROD: smartbetting-dados
+-- ============================================================================
+
 -- Create external table with auto schema detection
 CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.odds.raw_event_odds`
 OPTIONS (

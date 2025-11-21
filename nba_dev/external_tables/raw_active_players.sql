@@ -6,6 +6,14 @@
 -- Note: The 'team' field is automatically converted to STRUCT by BigQuery
 -- Access team fields using dot notation: team.id, team.name, team.abbreviation
 
+-- ============================================================================
+-- AMBIENTE: Este script é apenas para referência/documentação
+-- O DBT cria as external tables automaticamente via sources.yml usando o
+-- projeto configurado na variável de ambiente DBT_PROJECT:
+-- - DEV: sigma-heuristic-469419-h3
+-- - PROD: smartbetting-dados
+-- ============================================================================
+
 CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.nba.raw_active_players`
 OPTIONS (
   format = 'NEWLINE_DELIMITED_JSON',

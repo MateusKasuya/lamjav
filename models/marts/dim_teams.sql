@@ -99,10 +99,10 @@ dim_teams AS (
         tr_opp.team_offensive_rating_rank AS next_opponent_team_offensive_rating_rank,
         tr_opp.team_defensive_rating_rank AS next_opponent_team_defensive_rating_rank,
         
-        -- Injury report time for the team's home city (from staging)
+        -- Injury report time for the team's home city (STRING type, from staging)
         t.team_injury_report_time_brasilia,
         
-        -- Injury report time for the next game (based on where the game is played)
+        -- Injury report time for the next game (STRING type, based on where the game is played)
         CASE 
             WHEN noi.is_next_game_home THEN t.team_injury_report_time_brasilia
             ELSE ts_opp.team_injury_report_time_brasilia

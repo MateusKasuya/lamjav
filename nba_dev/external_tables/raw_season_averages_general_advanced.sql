@@ -3,6 +3,14 @@
 -- Location: gs://smartbetting-landing/nba/season_averages/{category}/{type}/{season_type}/{season}/season_averages_{category}_{type}_{season_type}_{season}.json
 -- Format: NEWLINE_DELIMITED_JSON
 
+-- ============================================================================
+-- AMBIENTE: Este script é apenas para referência/documentação
+-- O DBT cria as external tables automaticamente via sources.yml usando o
+-- projeto configurado na variável de ambiente DBT_PROJECT:
+-- - DEV: sigma-heuristic-469419-h3
+-- - PROD: smartbetting-dados
+-- ============================================================================
+
   CREATE OR REPLACE EXTERNAL TABLE `sigma-heuristic-469419-h3.nba.raw_season_averages_general_advanced`
   OPTIONS (
       format = 'NEWLINE_DELIMITED_JSON',
