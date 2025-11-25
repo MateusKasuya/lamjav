@@ -2,4 +2,7 @@ packages:
   - name: dbt_utils
     package: dbt-labs/dbt_utils
     version: 1.3.0
-sha1_hash: 226ae69cdfbc9367e2aa2c472b01f99dbce11de0
+  - name: dbt_external_tables
+    package: dbt-labs/dbt_external_tables
+    version: 0.8.7
+sha1_hash: e68b61059ff2c3dce45bfbe41500a9529b909bde

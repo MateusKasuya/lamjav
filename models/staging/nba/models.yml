@@ -88,8 +88,6 @@ models:
         description: "Unique identifier for the game"
       - name: game_date
         description: "Date when the game was/will be played"
-      - name: game_status
-        description: "Current status of the game (e.g., Final, Scheduled, In Progress)"
       - name: home_team_id
         description: "Unique identifier for the home team"
       - name: home_team_name

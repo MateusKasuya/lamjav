@@ -39,8 +39,8 @@ class FuzzyStringMatch:
         """
         query = """
         SELECT 
-            id AS player_id,
-            name,
+            player_id,
+            player_name,
             last_name_first_team
         FROM `{project_id}.nba.stg_active_players`
         """.format(project_id=self.project_id)
@@ -115,7 +115,7 @@ class FuzzyStringMatch:
         matches = []
 
         # Get lists of names for matching
-        active_names = active_players["name"].tolist()
+        active_names = active_players["player_name"].tolist()
         injury_names = injury_players["player_name"].tolist()
 
         print(
@@ -148,7 +148,7 @@ class FuzzyStringMatch:
                 if matched_name_active:
                     # Find the corresponding NBA active player record
                     active_player = active_players[
-                        active_players["name"] == matched_name_active
+                        active_players["player_name"] == matched_name_active
                     ].iloc[0]
                     match_record["nba_player_name"] = matched_name_active
                     match_record["nba_player_id"] = active_player["player_id"]
@@ -262,7 +262,7 @@ class FuzzyStringMatch:
                         == matched_name_nba_with_team
                     ].iloc[0]
                     match_record["nba_player_name"] = active_player[
-                        "name"
+                        "player_name"
                     ]  # Store without team for consistency
                     match_record["nba_player_id"] = active_player["player_id"]
 

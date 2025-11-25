@@ -90,6 +90,7 @@ players_with_injury_status AS (
     FROM player_ratings AS pr
     LEFT JOIN {{ source('bi_dev', 'de_para_nba_injury_players') }} AS dpp
         ON pr.player_id = dpp.nba_player_id
+        AND dpp.similarity_score > 70
     LEFT JOIN {{ ref('stg_injury_report') }} AS ir
         ON dpp.injury_player_name = ir.player_name
 ),

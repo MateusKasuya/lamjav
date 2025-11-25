@@ -45,7 +45,7 @@ def main() -> NoReturn:
 
     # Set start date for daily extraction
     # Use yesterday's date since today's games haven't finished yet
-    start_date = date.today() - timedelta(days=1)
+    start_date = date(2025,10,20)
     end_date = date.today()  # Yesterday's date
 
     # Initialize API clients

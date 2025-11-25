@@ -11,7 +11,7 @@ cleaned_data AS (
         id AS game_id,
         --season,
         date AS game_date,
-        status AS game_status,
+        --status AS game_status,
 
         --datetime AS game_datetime,
         -- Convert datetime to Brasília timezone (UTC-3)

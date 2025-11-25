@@ -12,7 +12,7 @@ all_team_games AS (
     SELECT
         game_id,
         game_date,
-        game_status,
+        --game_status,
         home_team_id AS team_id,
         home_team_abbreviation AS team_abbreviation,
         home_team_name AS team_name,
@@ -35,7 +35,7 @@ all_team_games AS (
     SELECT
         game_id,
         game_date,
-        game_status,
+        --game_status,
         visitor_team_id AS team_id,
         visitor_team_abbreviation AS team_abbreviation,
         visitor_team_name AS team_name,
