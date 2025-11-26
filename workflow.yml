@@ -1,86 +1,431 @@
+# ============================================================
+# WORKFLOW CUSTOMIZADO COM MONITORAMENTO
+# Estrutura paralela otimizada + logs + notificação email
+# ============================================================
+
 main:
     steps:
-    - nba-active-players:
-        call: http.get
+    # ============================================================================
+    # INICIALIZAÇÃO - Rastreamento de execução
+    # ============================================================================
+    - init:
+        assign:
+        - workflow_start_time: ${sys.now()}
+        - execution_id: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+        - project_id: "sigma-heuristic-469419-h3"
+        - workflow_status: "SUCCESS"
+        - phase1_status: "SUCCESS"
+        - phase2_status: "SUCCESS"
+        - phase3_status: "SUCCESS"
+        - phase4_status: "SUCCESS"
+        - phase5_status: "SUCCESS"
+        - failed_phases: []
+    
+    - log_start:
+        call: sys.log
         args:
-          url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - nba-game-player-stats:
-        call: http.get
+            severity: INFO
+            data:
+                message: "Workflow execution started"
+                execution_id: ${execution_id}
+                start_time: ${workflow_start_time}
+
+    # ============================================================================
+    # FASE 1: NBA data, odds-events e injury-report (8 services em paralelo)
+    # ============================================================================
+    - phase1_initial_extraction:
+        try:
+            steps:
+            - run_phase1:
+                parallel:
+                  branches:
+                    # Todos os NBA services
+                    - nba_active_players:
+                        steps:
+                          - call_nba_active_players:
+                              call: http.get
+                              args:
+                                url: https://nba-active-players-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - nba_game_player_stats:
+                        steps:
+                          - call_nba_game_player_stats:
+                              call: http.get
+                              args:
+                                url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - nba_games:
+                        steps:
+                          - call_nba_games:
+                              call: http.get
+                              args:
+                                url: https://nba-games-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - nba_season_averages_general_advanced:
+                        steps:
+                          - call_nba_season_averages_general_advanced:
+                              call: http.get
+                              args:
+                                url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - nba_season_averages_general_base:
+                        steps:
+                          - call_nba_season_averages_general_base:
+                              call: http.get
+                              args:
+                                url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - nba_team_standings:
+                        steps:
+                          - call_nba_team_standings:
+                              call: http.get
+                              args:
+                                url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    # Odds events
+                    - odds_events:
+                        steps:
+                          - call_odds_events:
+                              call: http.get
+                              args:
+                                url: https://odds-events-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    # Injury report
+                    - injury_report_extractor:
+                        steps:
+                          - call_injury_report_extractor:
+                              call: http.get
+                              args:
+                                url: https://injury-report-extractor-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+            - log_phase1_success:
+                call: sys.log
+                args:
+                    severity: INFO
+                    data:
+                        message: "Phase 1 completed successfully"
+                        phase: "initial_extraction"
+        except:
+            as: e
+            steps:
+            - log_phase1_error:
+                call: sys.log
+                args:
+                    severity: ERROR
+                    data:
+                        message: "Phase 1 failed"
+                        phase: "initial_extraction"
+                        error: ${e.message}
+            - mark_phase1_failed:
+                assign:
+                - phase1_status: "FAILED"
+                - workflow_status: "FAILED"
+                - failed_phases: ${list.concat(failed_phases, ["Phase 1 - Initial Extraction"])}
+            - stop_phase1_failed:
+                raise: ${e}
+    
+    # ============================================================================
+    # FASE 2: odds-event e pdf-processor (2 em paralelo)
+    # ============================================================================
+    - phase2_extraction_and_pdf:
+        try:
+            steps:
+            - run_phase2:
+                parallel:
+                  branches:
+                    - odds_event:
+                        steps:
+                          - call_odds_event:
+                              call: http.get
+                              args:
+                                url: https://odds-event-odds-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - pdf_processor:
+                        steps:
+                          - call_pdf_processor:
+                              call: googleapis.run.v2.projects.locations.jobs.run
+                              args:
+                                name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/pdf-processor
+            - log_phase2_success:
+                call: sys.log
+                args:
+                    severity: INFO
+                    data:
+                        message: "Phase 2 completed successfully"
+                        phase: "extraction_and_pdf"
+        except:
+            as: e
+            steps:
+            - log_phase2_error:
+                call: sys.log
+                args:
+                    severity: ERROR
+                    data:
+                        message: "Phase 2 failed"
+                        phase: "extraction_and_pdf"
+                        error: ${e.message}
+            - mark_phase2_failed:
+                assign:
+                - phase2_status: "FAILED"
+                - workflow_status: "FAILED"
+                - failed_phases: ${list.concat(failed_phases, ["Phase 2 - Extraction and PDF"])}
+            - stop_phase2_failed:
+                raise: ${e}
+    
+    # ============================================================================
+    # FASE 3: dbt-staging (sequencial)
+    # ============================================================================
+    - phase3_dbt_staging:
+        try:
+            steps:
+            - run_dbt_staging:
+                call: googleapis.run.v2.projects.locations.jobs.run
+                args:
+                  name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-staging
+            - log_phase3_success:
+                call: sys.log
+                args:
+                    severity: INFO
+                    data:
+                        message: "Phase 3 completed successfully"
+                        phase: "dbt_staging"
+        except:
+            as: e
+            steps:
+            - log_phase3_error:
+                call: sys.log
+                args:
+                    severity: ERROR
+                    data:
+                        message: "Phase 3 failed"
+                        phase: "dbt_staging"
+                        error: ${e.message}
+            - mark_phase3_failed:
+                assign:
+                - phase3_status: "FAILED"
+                - workflow_status: "FAILED"
+                - failed_phases: ${list.concat(failed_phases, ["Phase 3 - DBT Staging"])}
+            - stop_phase3_failed:
+                raise: ${e}
+    
+    # ============================================================================
+    # FASE 4: depara-nba-injury-players e depara-nba-odds-players (2 em paralelo)
+    # ============================================================================
+    - phase4_depara:
+        try:
+            steps:
+            - run_phase4:
+                parallel:
+                  branches:
+                    - depara_nba_injury_players:
+                        steps:
+                          - call_depara_nba_injury_players:
+                              call: http.get
+                              args:
+                                url: https://depara-nba-injury-players-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+                    - depara_nba_odds_players:
+                        steps:
+                          - call_depara_nba_odds_players:
+                              call: http.get
+                              args:
+                                url: https://depara-nba-odds-players-yiaf5ytl5q-ue.a.run.app
+                                auth:
+                                  type: OIDC
+            - log_phase4_success:
+                call: sys.log
+                args:
+                    severity: INFO
+                    data:
+                        message: "Phase 4 completed successfully"
+                        phase: "depara"
+        except:
+            as: e
+            steps:
+            - log_phase4_error:
+                call: sys.log
+                args:
+                    severity: ERROR
+                    data:
+                        message: "Phase 4 failed"
+                        phase: "depara"
+                        error: ${e.message}
+            - mark_phase4_failed:
+                assign:
+                - phase4_status: "FAILED"
+                - workflow_status: "FAILED"
+                - failed_phases: ${list.concat(failed_phases, ["Phase 4 - Depara"])}
+            - stop_phase4_failed:
+                raise: ${e}
+    
+    # ============================================================================
+    # FASE 5: dbt-intermediate-marts (sequencial)
+    # ============================================================================
+    - phase5_dbt_intermediate_marts:
+        try:
+            steps:
+            - run_dbt_intermediate:
+                call: googleapis.run.v2.projects.locations.jobs.run
+                args:
+                  name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-intermediate-marts
+            - log_phase5_success:
+                call: sys.log
+                args:
+                    severity: INFO
+                    data:
+                        message: "Phase 5 completed successfully"
+                        phase: "dbt_intermediate_marts"
+        except:
+            as: e
+            steps:
+            - log_phase5_error:
+                call: sys.log
+                args:
+                    severity: ERROR
+                    data:
+                        message: "Phase 5 failed"
+                        phase: "dbt_intermediate_marts"
+                        error: ${e.message}
+            - mark_phase5_failed:
+                assign:
+                - phase5_status: "FAILED"
+                - workflow_status: "FAILED"
+                - failed_phases: ${list.concat(failed_phases, ["Phase 5 - DBT Intermediate Marts"])}
+            - stop_phase5_failed:
+                raise: ${e}
+
+    # ============================================================================
+    # FINALIZAÇÃO E NOTIFICAÇÃO
+    # ============================================================================
+    
+    - finalize:
+        assign:
+        - workflow_end_time: ${sys.now()}
+        - duration_seconds: ${workflow_end_time - workflow_start_time}
+        - failed_count: ${len(failed_phases)}
+    
+    - log_completion:
+        call: sys.log
         args:
-          url: https://nba-game-player-stats-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - nba-games:
-        call: http.get
-        args:
-          url: https://nba-games-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - nba-season-averages-general-advanced:
-        call: http.get
-        args:
-          url: https://nba-season-averages-general-advanced-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - nba-season-averages-general-base:
-        call: http.get
-        args:
-          url: https://nba-season-averages-general-base-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - nba-team-standings:
-        call: http.get
-        args:
-          url: https://nba-team-standings-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - odds-event-odds:
-        call: http.get
-        args:
-          url: https://odds-event-odds-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - odds-events:
-        call: http.get
-        args:
-          url: https://odds-events-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - odds-extract-event-ids:
-        call: http.get
-        args:
-          url: https://odds-extract-event-ids-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - depara-nba-injury-players:
-        call: http.get
-        args:
-          url: https://depara-nba-injury-players-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - depara-nba-odds-players:
-        call: http.get
-        args:
-          url: https://depara-nba-odds-players-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - injury-report-extractor:
-        call: http.get
-        args:
-          url: https://injury-report-extractor-yiaf5ytl5q-ue.a.run.app
-          auth:
-            type: OIDC
-    - dbt-intermediate-marts:
-        call: googleapis.run.v2.projects.locations.jobs.run
-        args:
-          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-intermediate-marts
-    - dbt-staging:
-        call: googleapis.run.v2.projects.locations.jobs.run
-        args:
-          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/dbt-staging
-    - pdf-processor:
-        call: googleapis.run.v2.projects.locations.jobs.run
-        args:
-          name: projects/sigma-heuristic-469419-h3/locations/us-east1/jobs/pdf-processor
+            severity: ${if(workflow_status == "SUCCESS", "INFO", "ERROR")}
+            data:
+                message: "Workflow execution completed"
+                status: ${workflow_status}
+                duration_seconds: ${duration_seconds}
+                phase1: ${phase1_status}
+                phase2: ${phase2_status}
+                phase3: ${phase3_status}
+                phase4: ${phase4_status}
+                phase5: ${phase5_status}
+    
+    # Enviar notificação por email via SendGrid
+    - send_email_notification:
+        try:
+            steps:
+            - prepare_email_content:
+                assign:
+                - duration_minutes: ${int(duration_seconds / 60)}
+                - duration_remainder: ${int(duration_seconds - (duration_minutes * 60))}
+                - status_text: ${workflow_status}
+                - phase1_text: ${phase1_status}
+                - phase2_text: ${phase2_status}
+                - phase3_text: ${phase3_status}
+                - phase4_text: ${phase4_status}
+                - phase5_text: ${phase5_status}
+                - exec_id: ${execution_id}
+                - proj_id: ${project_id}
+            
+            - build_subject:
+                assign:
+                - email_subject: ${if(workflow_status == "SUCCESS", "[OK] Workflow lamjav-data-pipeline", "[FALHA] Workflow lamjav-data-pipeline")}
+            
+            - build_status_section:
+                assign:
+                - part1: "========================================\n"
+                - part2: "NOTIFICACAO DO WORKFLOW\n"
+                - part3: "========================================\n\n"
+                - part4: "Status - "
+                - part5: "\n"
+            
+            - build_duration_section:
+                assign:
+                - part6: "Duracao - "
+                - part7: "m "
+                - part8: "s\n\n"
+            
+            - build_phases_section:
+                assign:
+                - part9: "Resumo por Fase\n"
+                - part10: "- Fase 1 (NBA + Odds + Injury) - "
+                - part11: "\n- Fase 2 (Event Odds + PDF) - "
+                - part12: "\n- Fase 3 (DBT Staging) - "
+                - part13: "\n- Fase 4 (Depara) - "
+                - part14: "\n- Fase 5 (DBT Marts) - "
+                - part15: "\n\n"
+            
+            - build_result_section:
+                assign:
+                - part16: ${if(workflow_status == "SUCCESS", "Todas as fases completadas com sucesso!\n\n", "ATENCAO - Workflow falhou em uma ou mais fases!\n\n")}
+            
+            - build_footer_section:
+                assign:
+                - part17: "Execution ID - "
+                - part18: "\n\nVer logs completos\n"
+                - part19: "https://console.cloud.google.com/workflows/workflow/us-east1/lamjav-data-pipeline/execution/"
+                - part20: "?project="
+                - part21: "\n\n========================================\n"
+                - part22: "Notificacao automatica - SmartBetting\n"
+                - part23: "========================================"
+            
+            - build_email_body:
+                assign:
+                - email_body: ${part1 + part2 + part3 + part4 + status_text + part5 + part6 + string(duration_minutes) + part7 + string(duration_remainder) + part8 + part9 + part10 + phase1_text + part11 + phase2_text + part12 + phase3_text + part13 + phase4_text + part14 + phase5_text + part15 + part16 + part17 + exec_id + part18 + part19 + exec_id + part20 + proj_id + part21 + part22 + part23}
+            
+            - send_via_sendgrid:
+                call: http.post
+                args:
+                    url: https://api.sendgrid.com/v3/mail/send
+                    headers:
+                        Authorization: "Bearer api"
+                        Content-Type: application/json
+                    body:
+                        personalizations:
+                          - to:
+                              - email: tecnologia@smartbetting.app
+                        from:
+                            email: tecnologia@smartbetting.app
+                        subject: ${email_subject}
+                        content:
+                          - type: text/plain
+                            value: ${email_body}
+        except:
+            as: e
+            steps:
+            - log_email_error:
+                call: sys.log
+                args:
+                    severity: WARNING
+                    data:
+                        message: "Failed to send email notification"
+                        error: ${e.message}
+    
+    - return_result:
+        return:
+            status: ${workflow_status}
+            duration_seconds: ${duration_seconds}
+            phases:
+                phase1: ${phase1_status}
+                phase2: ${phase2_status}
+                phase3: ${phase3_status}
+                phase4: ${phase4_status}
+                phase5: ${phase5_status}
