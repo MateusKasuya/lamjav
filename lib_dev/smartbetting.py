@@ -9,6 +9,7 @@ from google.cloud import storage
 from google.cloud import bigquery
 import json
 import pandas as pd
+import re
 from typing import Any, List, Union, Optional, Dict
 from datetime import datetime, date
 
@@ -68,8 +69,72 @@ class SmartbettingLib:
                 return obj
         return obj
 
+    def sanitize_bigquery_column_name(self, column_name: str) -> str:
+        """
+        Sanitize a column name to be compatible with BigQuery naming requirements.
+        
+        BigQuery column names must:
+        - Contain only letters (a-z, A-Z), numbers (0-9), and underscores (_)
+        - Start with a letter or underscore
+        - Be at most 300 characters long
+        
+        Args:
+            column_name: Original column name
+            
+        Returns:
+            Sanitized column name compatible with BigQuery
+        """
+        # Convert to lowercase for consistency
+        sanitized = column_name.lower()
+        
+        # Replace invalid characters with underscore
+        # Keep only letters, numbers, and underscores
+        sanitized = re.sub(r'[^a-z0-9_]', '_', sanitized)
+        
+        # Remove consecutive underscores
+        sanitized = re.sub(r'_+', '_', sanitized)
+        
+        # Ensure it starts with a letter or underscore
+        if sanitized and sanitized[0].isdigit():
+            sanitized = '_' + sanitized
+        
+        # Trim to 300 characters max
+        sanitized = sanitized[:300]
+        
+        # Remove trailing underscore
+        sanitized = sanitized.rstrip('_')
+        
+        return sanitized
+
+    def sanitize_bigquery_column_names(self, data: Union[List[dict], dict]) -> Union[List[dict], dict]:
+        """
+        Recursively sanitize all column names in data to be BigQuery compatible.
+        
+        Args:
+            data: Data with potentially invalid column names (dict or list of dicts)
+            
+        Returns:
+            Data with sanitized column names
+        """
+        if isinstance(data, list):
+            return [self.sanitize_bigquery_column_names(item) for item in data]
+        elif isinstance(data, dict):
+            sanitized_dict = {}
+            for key, value in data.items():
+                sanitized_key = self.sanitize_bigquery_column_name(key)
+                # Recursively sanitize nested dictionaries
+                if isinstance(value, dict):
+                    sanitized_dict[sanitized_key] = self.sanitize_bigquery_column_names(value)
+                elif isinstance(value, list) and value and isinstance(value[0], dict):
+                    sanitized_dict[sanitized_key] = self.sanitize_bigquery_column_names(value)
+                else:
+                    sanitized_dict[sanitized_key] = value
+            return sanitized_dict
+        else:
+            return data
+
     def convert_to_ndjson(
-        self, data: Union[List[dict], dict], normalize_numbers: bool = True
+        self, data: Union[List[dict], dict], normalize_numbers: bool = True, sanitize_columns: bool = True
     ) -> str:
         """
         Convert data to NEWLINE DELIMITED JSON format for BigQuery external tables.
@@ -79,6 +144,8 @@ class SmartbettingLib:
                   or a single dictionary.
             normalize_numbers: If True, converts string representations of numbers
                              to actual numeric types (recommended for BigQuery)
+            sanitize_columns: If True, sanitizes column names to be BigQuery compatible
+                            (removes invalid characters, ensures proper format)
 
         Returns:
             NDJSON string representation of the data (one JSON object per line)
@@ -87,6 +154,11 @@ class SmartbettingLib:
             TypeError: If the data cannot be serialized to JSON
         """
         print("Converting to NDJSON...")
+
+        # Sanitize column names if requested (before numeric normalization)
+        if sanitize_columns:
+            print("Sanitizing column names for BigQuery compatibility...")
+            data = self.sanitize_bigquery_column_names(data)
 
         # Normalize numeric types if requested
         if normalize_numbers:

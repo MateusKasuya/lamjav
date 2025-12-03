@@ -47,8 +47,7 @@ def main() -> NoReturn:
 
     # Define all combinations - only general/advanced for now
     combinations = [
-        ("general", "base"),
-        ("general", "advanced")
+        ("shooting", "by_zone")
     ]
 
     # Define season types for each category

@@ -45,8 +45,8 @@ def main() -> NoReturn:
 
     # Set start date for daily extraction
     # Use yesterday's date since today's games haven't finished yet
-    start_date = date(2025,10,20)
-    end_date = date.today()  # Yesterday's date
+    start_date = date(2025,11,28)  # 22/10/2024
+    end_date =date(2025,12,1)  # Today's date
 
     # Initialize API clients
     balldontlie = BalldontlieLib()

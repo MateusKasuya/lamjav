@@ -169,6 +169,62 @@ models:
       - name: loaded_at
         description: "Timestamp when the record was loaded into the staging table"
 
+  - name: stg_season_averages_shooting_by_zone
+    description: "Staging table for NBA player season averages (shooting by zone). Contains field goal statistics broken down by court zones including corner 3s, above-the-break 3s, restricted area, paint, mid-range, and backcourt."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+      - name: corner_3_fga
+        description: "Average corner 3-point field goals attempted per game"
+      - name: corner_3_fgm
+        description: "Average corner 3-point field goals made per game"
+      - name: corner_3_fg_pct
+        description: "Corner 3-point field goal percentage"
+      - name: left_corner_3_fga
+        description: "Average left corner 3-point field goals attempted per game"
+      - name: left_corner_3_fgm
+        description: "Average left corner 3-point field goals made per game"
+      - name: left_corner_3_fg_pct
+        description: "Left corner 3-point field goal percentage"
+      - name: right_corner_3_fga
+        description: "Average right corner 3-point field goals attempted per game"
+      - name: right_corner_3_fgm
+        description: "Average right corner 3-point field goals made per game"
+      - name: right_corner_3_fg_pct
+        description: "Right corner 3-point field goal percentage"
+      - name: above_the_break_3_fga
+        description: "Average above-the-break 3-point field goals attempted per game"
+      - name: above_the_break_3_fgm
+        description: "Average above-the-break 3-point field goals made per game"
+      - name: above_the_break_3_fg_pct
+        description: "Above-the-break 3-point field goal percentage"
+      - name: restricted_area_fga
+        description: "Average restricted area field goals attempted per game"
+      - name: restricted_area_fgm
+        description: "Average restricted area field goals made per game"
+      - name: restricted_area_fg_pct
+        description: "Restricted area field goal percentage"
+      - name: in_the_paint_non_ra_fga
+        description: "Average in-the-paint (non-restricted area) field goals attempted per game"
+      - name: in_the_paint_non_ra_fgm
+        description: "Average in-the-paint (non-restricted area) field goals made per game"
+      - name: in_the_paint_non_ra_fg_pct
+        description: "In-the-paint (non-restricted area) field goal percentage"
+      - name: mid_range_fga
+        description: "Average mid-range field goals attempted per game"
+      - name: mid_range_fgm
+        description: "Average mid-range field goals made per game"
+      - name: mid_range_fg_pct
+        description: "Mid-range field goal percentage"
+      - name: backcourt_fga
+        description: "Average backcourt field goals attempted per game"
+      - name: backcourt_fgm
+        description: "Average backcourt field goals made per game"
+      - name: backcourt_fg_pct
+        description: "Backcourt field goal percentage"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+
   - name: stg_team_standings
     description: "Staging table for NBA team standings. Contains current season standings, records, and conference information."
     columns:

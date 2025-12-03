@@ -102,19 +102,18 @@ next_games AS (
 last_five_games AS (
     SELECT
         team_id,
-        STRING_AGG(win_loss, ' ' ORDER BY game_id) AS team_last_five_games
+        STRING_AGG(win_loss, ' ' ORDER BY game_date DESC, game_id DESC) AS team_last_five_games
     FROM (
         SELECT
-            *,
-            ROW_NUMBER() OVER (PARTITION BY team_id ORDER BY game_id DESC) AS row_num
-        FROM (
-            SELECT
-                atg.team_id,
-                atg.game_id,
-                atg.win_loss
-            FROM
-                all_team_games AS atg
-        )
+            team_id,
+            game_id,
+            game_date,
+            win_loss,
+            ROW_NUMBER() OVER (PARTITION BY team_id ORDER BY game_date DESC, game_id DESC) AS row_num
+        FROM all_team_games
+        WHERE 
+            win_loss IS NOT NULL  -- Only completed games
+            AND game_date < CURRENT_DATE()  -- Only past games
     )
     WHERE row_num <= 5
     GROUP BY team_id

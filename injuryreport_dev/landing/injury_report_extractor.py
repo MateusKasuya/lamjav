@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from lib_dev.injuryreport import NBAInjuryReport
 from lib_dev.smartbetting import SmartbettingLib
 from lib_dev.utils import Bucket, Catalog, Table, Season
+from datetime import date
 
 
 def main() -> NoReturn:
@@ -49,12 +50,13 @@ def main() -> NoReturn:
         print("=" * 80)
 
         # Fetch current injury report
-        result = injury_client.fetch_current_report()
+        results = injury_client.fetch_historical_reports(date(2025,11,28), date.today(),[(6, "PM")])
 
-        if result is None:
+        if not results:
             raise Exception("Failed to fetch current injury report from NBA API")
 
-        pdf_data, filename = result
+        # Get the most recent report (last in the list)
+        pdf_data, filename = results[-1]
 
         # Extract report information for logging
         report_info = injury_client._extract_report_info(filename)

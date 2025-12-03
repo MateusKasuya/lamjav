@@ -154,3 +154,106 @@ models:
       - name: home_away
         description: "Location of game from player's perspective: 'Casa' (Home) or 'Fora' (Away)"
 
+  - name: dim_player_shooting_by_zones
+    description: "Dimension table for NBA player shooting by zones. Provides a comprehensive view of player shooting by zones including corner 3s, above-the-break 3s, restricted area, paint, mid-range, and backcourt."
+    columns:
+      - name: player_id
+        description: "Unique identifier for the player"
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        description: "Full name of the player"
+      - name: corner_3_fga
+        description: "Average corner 3-point field goals attempted per game"
+      - name: corner_3_fgm
+        description: "Average corner 3-point field goals made per game"
+      - name: corner_3_fg_pct
+        description: "Corner 3-point field goal percentage"
+      - name: left_corner_3_fga
+        description: "Average left corner 3-point field goals attempted per game"
+      - name: left_corner_3_fgm
+        description: "Average left corner 3-point field goals made per game"
+      - name: left_corner_3_fg_pct
+        description: "Left corner 3-point field goal percentage"
+      - name: right_corner_3_fga
+        description: "Average right corner 3-point field goals attempted per game"
+      - name: right_corner_3_fgm
+        description: "Average right corner 3-point field goals made per game"
+      - name: right_corner_3_fg_pct
+        description: "Right corner 3-point field goal percentage"
+      - name: above_the_break_3_fga
+        description: "Average above-the-break 3-point field goals attempted per game"
+      - name: above_the_break_3_fgm
+        description: "Average above-the-break 3-point field goals made per game"
+      - name: above_the_break_3_fg_pct
+        description: "Above-the-break 3-point field goal percentage"
+      - name: restricted_area_fga
+        description: "Average restricted area field goals attempted per game"
+      - name: restricted_area_fgm
+        description: "Average restricted area field goals made per game"
+      - name: restricted_area_fg_pct
+        description: "Restricted area field goal percentage"
+      - name: in_the_paint_non_ra_fga
+        description: "Average in the paint (non-restricted area) field goals attempted per game"
+      - name: in_the_paint_non_ra_fgm
+        description: "Average in the paint (non-restricted area) field goals made per game"
+      - name: in_the_paint_non_ra_fg_pct
+        description: "In the paint (non-restricted area) field goal percentage"
+      - name: mid_range_fga
+        description: "Average mid-range field goals attempted per game"
+      - name: mid_range_fgm
+        description: "Average mid-range field goals made per game"
+      - name: mid_range_fg_pct
+        description: "Mid-range field goal percentage"
+      - name: backcourt_fga
+        description: "Average backcourt field goals attempted per game"
+      - name: backcourt_fgm
+        description: "Average backcourt field goals made per game"
+      - name: backcourt_fg_pct
+        description: "Backcourt field goal percentage"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
+
+  - name: ft_games
+    description: "Fact table for NBA games. Provides a comprehensive view of games including team information, game context, and game statistics."
+    columns:
+      - name: game_id
+        description: "Unique identifier for the game"
+        tests:
+          - not_null
+          - unique
+      - name: game_date
+        description: "Date when the game was played"
+      - name: home_team_id
+        description: "Unique identifier for the home team"
+      - name: home_team_name
+        description: "Full name of the home team"
+      - name: home_team_abbreviation
+        description: "Three-letter abbreviation for the home team"
+      - name: home_team_score
+        description: "Score for the home team"
+      - name: visitor_team_id
+        description: "Unique identifier for the visiting team"
+      - name: visitor_team_name
+        description: "Full name of the visiting team"
+      - name: visitor_team_abbreviation
+        description: "Three-letter abbreviation for the visiting team"
+      - name: visitor_team_score
+        description: "Score for the visiting team"
+      - name: winner_team_id
+        description: "Unique identifier for the winning team"
+      - name: winner_team_name
+        description: "Full name of the winning team"
+      - name: winner_team_abbreviation
+        description: "Three-letter abbreviation for the winning team"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
+      - name: home_team_is_b2b_game
+        description: "Boolean flag indicating if the home team played a back-to-back game"
+      - name: visitor_team_is_b2b_game
+        description: "Boolean flag indicating if the visiting team played a back-to-back game"
+      - name: home_team_is_next_game
+        description: "Boolean flag indicating if the home team has a next game"
+      - name: visitor_team_is_next_game
+        description: "Boolean flag indicating if the visiting team has a next game"

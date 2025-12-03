@@ -158,6 +158,26 @@ sources:
             description: "Season statistics (STRUCT with base statistical fields like pts, reb, ast, fg_pct, etc.)"
             data_type: struct
 
+      - name: raw_season_averages_shooting_by_zone
+        description: "NBA season averages shooting by zone raw data from Balldontlie API (NDJSON format)"
+        external:
+          location: "gs://smartbetting-landing/nba/season_averages/shooting/by_zone/*/*/raw_nba_season_averages_shooting_by_zone_*.json"
+          options:
+            format: NEWLINE_DELIMITED_JSON
+        columns:
+          - name: player
+            description: "Player information (STRUCT with id, first_name, last_name, position, height, weight, jersey_number, college, country, draft_year, draft_round, draft_number)"
+            data_type: struct
+          - name: season
+            description: "Season year (e.g., 2025)"
+            data_type: integer
+          - name: season_type
+            description: "Season type (regular, playoffs, ist, playin)"
+            data_type: string
+          - name: stats
+            description: "Season statistics (STRUCT with shooting by zone fields: corner_3, above_the_break_3, restricted_area, in_the_paint_non_ra, mid_range, backcourt - all with fga, fgm, and fg_pct)"
+            data_type: struct
+
       - name: raw_games
         description: "NBA games raw data from Balldontlie API (NDJSON format)"
         external:

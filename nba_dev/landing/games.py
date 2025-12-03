@@ -39,8 +39,8 @@ def main() -> NoReturn:
     season = Season.SEASON_2025
 
     # Set start date for daily extraction
-    start_date = date.today() - timedelta(days=1)   # 22/10/2024
-    end_date =date.today()  # Today's date
+    start_date = date(2025,11,28)  # 22/10/2024
+    end_date =date(2025,12,1)  # Today's date
 
     # Initialize API clients
     balldontlie = BalldontlieLib()
